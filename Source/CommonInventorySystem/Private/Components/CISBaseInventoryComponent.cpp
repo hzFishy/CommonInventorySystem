@@ -13,7 +13,7 @@
 
 
 #if FU_WITH_CONSOLE
-namespace CIS::Inventory::Debug
+namespace CIS::Core::Debug
 {
 	FU_CMD_OBJECT_ALLRUNFUNC(DumpAllSlotsForAll,
 		"CIS.Inventory.DumpAllSlotsForAll", "Dump info for all slots for all base inventory components",
@@ -28,6 +28,14 @@ FCISInventorySlotCategory::FCISInventorySlotCategory(int32 Size)
 {
 	Slots.Reserve(Size);
 }
+
+
+FCISInventoryItemInfo::FCISInventoryItemInfo():
+	Amount(0)
+{}
+
+FCISInventoryItemInfo::FCISInventoryItemInfo(int32 InAmount): Amount(InAmount)
+{}
 
 
 DEFINE_LOG_CATEGORY(LogCISInventory);
@@ -53,6 +61,22 @@ void UCISBaseInventoryComponent::OnRegister()
 	InventoryDeveloperSettings = GetDefault<UCISInventoryDeveloperSettings>();
 	
 	InitFromPresetDefinition();
+}
+
+bool UCISBaseInventoryComponent::ProviderHasItems(FCTItemProviderQuery Query)
+{
+	for (auto& QueryEntry : Query.Entries)
+	{
+		if (auto* CacheEntry = CachedInventoryItemInfo.Find(QueryEntry.ItemTag))
+		{
+			if (CacheEntry->Amount < QueryEntry.Amount)
+			{
+				return false;
+			}
+		}
+	}
+
+	return true;
 }
 
 	
@@ -156,7 +180,7 @@ void UCISBaseInventoryComponent::DeferredCreateItemsFromDefinition(UCISInventory
 {
 	UAssetManager::GetIfInitialized()->GetStreamableManager().RequestAsyncLoad(
 		ItemDefinition->ItemClass.ToSoftObjectPath(),
-		FStreamableDelegate::CreateWeakLambda(this, [Slot, ItemCount, ItemDefinition]()
+		FStreamableDelegate::CreateWeakLambda(this, [this, Slot, ItemCount, ItemDefinition]()
 		{
 			for (int32 i = 0; i < ItemCount; i++)
 			{
@@ -165,6 +189,7 @@ void UCISBaseInventoryComponent::DeferredCreateItemsFromDefinition(UCISInventory
 				Slot->AddItem(NewItem, false);
 			}
 
+			AddItemsToCachedInfo(Slot->GetRepresentedItemTag(), ItemCount);
 			Slot->CallUpdate();
 		}),
 		FStreamableManager::AsyncLoadHighPriority
@@ -235,8 +260,20 @@ UCISInventorySlot* UCISBaseInventoryComponent::GetSlot(FGameplayTag SlotCategory
 	return nullptr;
 }
 
-	
-	/*----------------------------------------------------------------------------
+void UCISBaseInventoryComponent::AddItemsToCachedInfo(FGameplayTag ItemTag, int32 Amount)
+{
+	if (auto* Entry = CachedInventoryItemInfo.Find(ItemTag))
+	{
+		Entry->Amount += Amount;
+	}
+	else
+	{
+		CachedInventoryItemInfo.Add(ItemTag, FCISInventoryItemInfo(Amount));
+	}
+}
+
+
+/*----------------------------------------------------------------------------
 		Debug
 	----------------------------------------------------------------------------*/
 void UCISBaseInventoryComponent::DumpAllSlots()

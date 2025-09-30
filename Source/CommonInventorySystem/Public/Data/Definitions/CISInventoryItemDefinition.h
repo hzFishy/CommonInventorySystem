@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "Data/Fragments/CISBaseInventoryItemFragment.h"
 #include "Engine/DataAsset.h"
@@ -22,6 +21,8 @@ class COMMONINVENTORYSYSTEM_API UCISInventoryItemDefinition : public UPrimaryDat
 public:
 	UCISInventoryItemDefinition();
 
+	virtual FPrimaryAssetId GetPrimaryAssetId() const override;
+
 	
 	UPROPERTY(EditAnywhere, Category="CommonInteractionSystem")
 	TSoftClassPtr<UCISInventoryItem> ItemClass;
@@ -34,4 +35,10 @@ public:
 	
 	UPROPERTY(EditAnywhere, Category="CommonInteractionSystem", meta=(ExcludeBaseStruct))
 	TArray<TInstancedStruct<FCISBaseInventoryItemFragment>> Fragments;
+
+	UFUNCTION(BlueprintCallable, Category="CommonInventorySystem", BlueprintPure=false)
+	bool GetFragmentFromType(
+		UPARAM(meta=(MetaStruct="/Script/CommonInventorySystem.CISBaseInventoryItemFragment")) UScriptStruct* Type,
+		bool bAllowChilds,
+		TInstancedStruct<FCISBaseInventoryItemFragment>& FoundStruct) const;
 };

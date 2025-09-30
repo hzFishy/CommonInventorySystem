@@ -6,12 +6,14 @@
 #include "GameplayTagContainer.h"
 #include "Components/ActorComponent.h"
 #include "Interfaces/CISInventoryDefinitionInterface.h"
+#include "Interfaces/CTItemProviderInteface.h"
 #include "Logging/FULogging.h"
 #include "CISBaseInventoryComponent.generated.h"
 class UCISInventoryItem;
 class UCISInventoryDeveloperSettings;
 class UCISInventorySlot;
 class UCISInventoryItemDefinition;
+
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCISOnInventorySlotAddedSignature,
 	FGameplayTag, Category,
@@ -30,13 +32,14 @@ struct COMMONINVENTORYSYSTEM_API FCISInventorySlotCategory
 	TArray<TObjectPtr<UCISInventorySlot>> Slots;
 };
 
-/** Used to hold temporary vars while we move slot items */
-/*struct COMMONINVENTORYSYSTEM_API FCISInventorySlotMoveTransaction
+/** Cached info per item in inventory */
+struct COMMONINVENTORYSYSTEM_API FCISInventoryItemInfo
 {
-	FCISInventorySlotMoveTransaction(UCISInventorySlot* SourceSlot, int32 MovedCount);
+	FCISInventoryItemInfo();
+	FCISInventoryItemInfo(int32 InAmount);
 
-	
-};*/
+	int32 Amount;
+};
 
 
 COMMONINVENTORYSYSTEM_API DECLARE_LOG_CATEGORY_EXTERN(LogCISInventory, Log, All);
@@ -44,7 +47,7 @@ COMMONINVENTORYSYSTEM_API DECLARE_LOG_CATEGORY_EXTERN(LogCISInventory, Log, All)
 
 
 UCLASS(ClassGroup=(CommonInventorySystem), DisplayName="Base Inventory Component")
-class COMMONINVENTORYSYSTEM_API UCISBaseInventoryComponent : public UActorComponent
+class COMMONINVENTORYSYSTEM_API UCISBaseInventoryComponent : public UActorComponent, public ICTItemProviderInteface
 {
 	GENERATED_BODY()
 
@@ -69,6 +72,7 @@ protected:
 	
 	UPROPERTY()
 	TMap<FGameplayTag, FCISInventorySlotCategory> InventorySlots;
+	TMap<FGameplayTag, FCISInventoryItemInfo> CachedInventoryItemInfo;
 	
 	
 	/*----------------------------------------------------------------------------
@@ -78,6 +82,8 @@ public:
 	UCISBaseInventoryComponent();
 
 	virtual void OnRegister() override;
+
+	virtual bool ProviderHasItems(FCTItemProviderQuery Query) override;
 
 	
 	/*----------------------------------------------------------------------------
@@ -103,14 +109,16 @@ protected:
 
 	void DeferredCreateItemsFromDefinition(UCISInventorySlot* Slot, int32 ItemCount, UCISInventoryItemDefinition* ItemDefinition);
 
-
+	
 	/*----------------------------------------------------------------------------
 		Operations
 	----------------------------------------------------------------------------*/
 public:
 	/**
-	 * Called from UI when user drag and drops slot on another one.
-	 * This could be
+	 * Global function for moving items from a source slot to the target slot.
+	 * 
+	 * For example this would typically be called from UI when the user drag and drops a slot on another one.
+	 * This could mean:
 	 * - moving the items from the source slot to the empty target one
 	 * - swapping the items around if both slot don't have same item id
 	 * - if same id stacking the items on the target one
@@ -119,13 +127,16 @@ public:
 	void RequestMove(FGameplayTag SourceSlotCategory, int32 SourceSlotIndex,
 		FGameplayTag TargetSlotCategory, int32 TargetSlotIndex);
 
-
+	
 	/*----------------------------------------------------------------------------
 		Utilities
 	----------------------------------------------------------------------------*/
 public:
 	UCISInventorySlot* GetSlot(FGameplayTag SlotCategory, int32 SlotIndex);
 
+protected:
+	void AddItemsToCachedInfo(FGameplayTag ItemTag, int32 Amount);
+	
 	
 	/*----------------------------------------------------------------------------
 		Debug

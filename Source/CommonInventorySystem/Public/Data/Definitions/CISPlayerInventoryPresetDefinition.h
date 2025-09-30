@@ -1,10 +1,11 @@
-﻿// Copyright SurvivalMetroGame Dev Team. All Rights Reserved.
+﻿// By hzFishy - 2025 - Do whatever you want with it.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "CISInventoryPresetDefinition.h"
 #include "CISPlayerInventoryPresetDefinition.generated.h"
+
 
 /**
  * Subclass for the player.

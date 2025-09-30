@@ -13,14 +13,14 @@ public class CommonInventorySystem : ModuleRules
 			"Core",
 			"DeveloperSettings",
 			"GameplayTags",
-			"FishyUtils"
+			"FishyUtils", "CommonTypes"
 		});
 			
 		
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
 			"CoreUObject", "Engine",
-			"Slate", "SlateCore",
+			"Slate", "SlateCore"
 		});
 	}
 }

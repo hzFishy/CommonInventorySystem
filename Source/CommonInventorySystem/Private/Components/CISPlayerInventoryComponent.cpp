@@ -9,7 +9,7 @@
 
 
 #if FU_WITH_CONSOLE
-namespace CIS::Inventory::Debug
+namespace CIS::Core::Debug
 {
 	FU_CMD_OBJECT_ALLRUNFUNC(DumpAllSlotsForPlayer,
 		"CIS.Inventory.DumpAllSlotsForPlayer", "Dump info for all slots for unique player inventory components",
