@@ -24,4 +24,10 @@ public:
 		const TArray<UCISInventoryItemDefinition*>& InputItemDefinitions,
 		const FCCSCraftingRecipeOutputEntry& CraftingRecipeOutputEntry,
 		const TArray<FCCSCraftingRecipeInputEntry>& CraftingRecipeInputEntries);
+
+	UFUNCTION(BlueprintPure, Category="CommonMerged")
+	static FCCSCraftingRecipeOutput CraftingWidgetRecipeOutputToCraftingRecipeOutput(const FCCSCraftingWidgetRecipeOutputData& OutputData);
+	
+	UFUNCTION(BlueprintPure, Category="CommonMerged")
+	static FCCSCraftingRecipeInput CraftingWidgetRecipeInputToCraftingRecipeOutput(const TArray<FCCSCraftingWidgetRecipeInputData>& InputData);
 };

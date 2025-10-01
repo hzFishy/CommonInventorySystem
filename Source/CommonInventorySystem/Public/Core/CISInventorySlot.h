@@ -77,6 +77,13 @@ public:
 	 * @param bCallUpdate do we call CallUpdate after adding all items
 	 */
 	void AddItems(const TArray<UCISInventoryItem*>& NewItems, bool bCallUpdate);
+
+	/**
+	 * Try to remove the given amount.
+	 * AmountToRemove can be higher than GetItemCount.
+	 * @returns How much we removed
+	 */
+	int32 RemoveAmount(int32 AmountToRemove, bool bCallUpdate);
 	
 	/**
 	 * Removes all items in the array.

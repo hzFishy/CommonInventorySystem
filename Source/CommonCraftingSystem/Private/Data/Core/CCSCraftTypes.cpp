@@ -11,6 +11,12 @@ FCCSCraftingRecipeInputEntry::FCCSCraftingRecipeInputEntry():
 	Amount(1)
 {}
 
+FCCSCraftingRecipeInputEntry::FCCSCraftingRecipeInputEntry(const FCCSCraftingWidgetRecipeInputData& InputData)
+{
+	ItemTag = InputData.ItemTag;
+	Amount = InputData.Amount;
+}
+
 
 FCCSCraftingRecipeInput::FCCSCraftingRecipeInput() {}
 
@@ -23,6 +29,12 @@ FCCSCraftingRecipeOutputEntry::FCCSCraftingRecipeOutputEntry(): Amount(1)
 {}
 
 FCCSCraftingRecipeOutput::FCCSCraftingRecipeOutput() {}
+
+FCCSCraftingRecipeOutput::FCCSCraftingRecipeOutput(const FCCSCraftingWidgetRecipeOutputData& OutputData)
+{
+	Entry.ItemTag = OutputData.ItemTag;
+	Entry.Amount = OutputData.Amount;
+}
 
 	
 	/*----------------------------------------------------------------------------

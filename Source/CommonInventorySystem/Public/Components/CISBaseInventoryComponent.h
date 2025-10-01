@@ -41,6 +41,42 @@ struct COMMONINVENTORYSYSTEM_API FCISInventoryItemInfo
 	int32 Amount;
 };
 
+struct COMMONINVENTORYSYSTEM_API FCISInventoryRemoveRequestItem
+{
+	FCISInventoryRemoveRequestItem();
+	FCISInventoryRemoveRequestItem(FGameplayTag InTag, int32 InAmount);
+
+	FGameplayTag Tag;
+	int32 Amount;
+};
+
+struct COMMONINVENTORYSYSTEM_API FCISInventoryRemoveRequest
+{
+	FCISInventoryRemoveRequest();
+	FCISInventoryRemoveRequest(const FCTItemProviderCraftQuery& CraftQuery, const FCTItemProviderItemSearchQueryResult& InItemSearchQueryResult);
+
+	TArray<FCISInventoryRemoveRequestItem> Items;
+	const FCTItemProviderItemSearchQueryResult* ItemSearchQueryResult;
+};
+
+struct COMMONINVENTORYSYSTEM_API FCISInventoryAddRequestItem
+{
+	FCISInventoryAddRequestItem();
+	FCISInventoryAddRequestItem(FGameplayTag InTag, int32 InAmount);
+
+	FGameplayTag Tag;
+	int32 Amount;
+};
+
+struct COMMONINVENTORYSYSTEM_API FCISInventoryAddRequest
+{
+	FCISInventoryAddRequest();
+	FCISInventoryAddRequest(const FCTItemProviderCraftQuery& CraftQuery, FGameplayTag InSlotCateogryTag);
+
+	TArray<FCISInventoryAddRequestItem> Items;
+	FGameplayTag SlotCateogryTag;
+};
+
 
 COMMONINVENTORYSYSTEM_API DECLARE_LOG_CATEGORY_EXTERN(LogCISInventory, Log, All);
 #define CIS_LOG_INV_W(FORMAT, ...) _FU_LOG_OBJECT_W(LogCISInventory, FORMAT, __VA_ARGS__)
@@ -111,6 +147,9 @@ protected:
 
 	void DeferredCreateItemsFromDefinition(UCISInventorySlot* Slot, int32 ItemCount, UCISInventoryItemDefinition* ItemDefinition);
 
+	/** Get the definition of an item from its tag and add it to a given slot */
+	void DeferredCreateItemsFromTag(UCISInventorySlot* Slot, int32 ItemCount, FGameplayTag ItemTag);
+
 	
 	/*----------------------------------------------------------------------------
 		Operations
@@ -129,12 +168,18 @@ public:
 	void RequestMove(FGameplayTag SourceSlotCategory, int32 SourceSlotIndex,
 		FGameplayTag TargetSlotCategory, int32 TargetSlotIndex);
 
+	void RequestRemove(const FCISInventoryRemoveRequest& RemoveRequest);
+
+	void RequestAdd(const FCISInventoryAddRequest& AddRequest);
+
 	
 	/*----------------------------------------------------------------------------
 		Utilities
 	----------------------------------------------------------------------------*/
 public:
 	UCISInventorySlot* GetSlot(FGameplayTag SlotCategory, int32 SlotIndex);
+	
+	UCISInventorySlot* GetSlotForItemTag(FGameplayTag SlotCategory, FGameplayTag ItemTag);
 
 protected:
 	void AddItemsToCachedInfo(FGameplayTag ItemTag, int32 Amount);

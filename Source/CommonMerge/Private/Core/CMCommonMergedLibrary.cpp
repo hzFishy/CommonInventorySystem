@@ -24,6 +24,7 @@ FCCSCraftingWidgetRecipeData UCMCommonMergedLibrary::CollectCraftingWidgetRecipe
 		RecipeData.OutputData.Tooltip = OutputUIFragment->Tooltip;
 		RecipeData.OutputData.SoftIconTexture = OutputUIFragment->Icon;
 		RecipeData.OutputData.Amount = CraftingRecipeOutputEntry.Amount;
+		RecipeData.OutputData.ItemTag = CraftingRecipeOutputEntry.ItemTag;
 	}
 
 	for (int i = 0; i < InputItemDefinitions.Num(); ++i)
@@ -37,9 +38,29 @@ FCCSCraftingWidgetRecipeData UCMCommonMergedLibrary::CollectCraftingWidgetRecipe
 			InputDataEntry.DisplayName = InputUIFragment->DisplayName;
 			InputDataEntry.SoftIconTexture = InputUIFragment->Icon;
 			InputDataEntry.Amount = CraftingRecipeInputEntry.Amount;
+			InputDataEntry.ItemTag = CraftingRecipeInputEntry.ItemTag;
 		}
 		RecipeData.InputData.Emplace(InputDataEntry);
 	}
 
 	return RecipeData;
+}
+
+FCCSCraftingRecipeOutput UCMCommonMergedLibrary::CraftingWidgetRecipeOutputToCraftingRecipeOutput(
+	const FCCSCraftingWidgetRecipeOutputData& OutputData)
+{
+	return FCCSCraftingRecipeOutput(OutputData);
+}
+
+FCCSCraftingRecipeInput UCMCommonMergedLibrary::CraftingWidgetRecipeInputToCraftingRecipeOutput(
+	const TArray<FCCSCraftingWidgetRecipeInputData>& InputData)
+{
+	FCCSCraftingRecipeInput Input;
+
+	for (auto& InputDataEntry : InputData)
+	{
+		Input.Entries.Emplace(InputDataEntry);
+	}
+
+	return Input;
 }

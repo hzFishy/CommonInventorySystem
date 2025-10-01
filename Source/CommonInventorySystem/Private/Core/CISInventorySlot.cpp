@@ -66,8 +66,24 @@ void UCISInventorySlot::AddItems(const TArray<UCISInventoryItem*>& NewItems, boo
 	}
 }
 
+int32 UCISInventorySlot::RemoveAmount(int32 AmountToRemove, bool bCallUpdate)
+{
+	int32 RealRemovingAmount =  GetItemCount() < AmountToRemove ? GetItemCount() : AmountToRemove;
+
+	// items should be GC'ed if not moved to another slot since the only hard ref should be in the slot
+	Items.SetNum(Items.Num() - RealRemovingAmount);
+	
+	if (bCallUpdate)
+	{
+		CallUpdate();
+	}
+
+	return RealRemovingAmount;
+}
+
 void UCISInventorySlot::ClearAllItems(bool bCallUpdate)
 {
+	// items should be GC'ed if not moved to another slot since the only hard ref should be in the slot
 	Items.Empty();
 	
 	if (bCallUpdate)

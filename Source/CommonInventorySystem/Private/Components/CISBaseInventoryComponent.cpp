@@ -10,6 +10,7 @@
 #include "Interfaces/CISInventoryDefinitionInterface.h"
 #include "Utility/FUUtilities.h"
 #include "Console/FUConsole.h"
+#include "Core/CISInventorySubsystem.h"
 
 
 #if FU_WITH_CONSOLE
@@ -36,6 +37,46 @@ FCISInventoryItemInfo::FCISInventoryItemInfo():
 
 FCISInventoryItemInfo::FCISInventoryItemInfo(int32 InAmount): Amount(InAmount)
 {}
+
+FCISInventoryRemoveRequestItem::FCISInventoryRemoveRequestItem():
+	Amount(0)
+{}
+
+FCISInventoryRemoveRequestItem::FCISInventoryRemoveRequestItem(FGameplayTag InTag, int32 InAmount):
+	Tag(InTag),
+	Amount(InAmount)
+{}
+
+FCISInventoryRemoveRequest::FCISInventoryRemoveRequest():
+	ItemSearchQueryResult(nullptr)
+{}
+
+FCISInventoryRemoveRequest::FCISInventoryRemoveRequest(const FCTItemProviderCraftQuery& CraftQuery,
+	const FCTItemProviderItemSearchQueryResult& InItemSearchQueryResult)
+{
+	for (auto& CraftInputEntry : CraftQuery.InputData.Entries)
+	{
+		Items.Emplace(FCISInventoryRemoveRequestItem(CraftInputEntry.ItemTag, CraftInputEntry.Amount));
+	}
+	
+	ItemSearchQueryResult = &InItemSearchQueryResult;
+}
+
+FCISInventoryAddRequestItem::FCISInventoryAddRequestItem():
+	Amount(0)
+{}
+
+FCISInventoryAddRequestItem::FCISInventoryAddRequestItem(FGameplayTag InTag, int32 InAmount):
+	Tag(InTag), Amount(InAmount)
+{}
+
+FCISInventoryAddRequest::FCISInventoryAddRequest() {}
+
+FCISInventoryAddRequest::FCISInventoryAddRequest(const FCTItemProviderCraftQuery& CraftQuery, FGameplayTag InSlotCateogryTag)
+{
+	Items.Emplace(FCISInventoryAddRequestItem(CraftQuery.OutputData.ItemTag, CraftQuery.OutputData.Amount));
+	SlotCateogryTag = InSlotCateogryTag;
+}
 
 
 DEFINE_LOG_CATEGORY(LogCISInventory);
@@ -66,10 +107,14 @@ void UCISBaseInventoryComponent::OnRegister()
 bool UCISBaseInventoryComponent::SearchItems(const FCTItemProviderItemSearchQuery& Query, FCTItemProviderItemSearchQueryResult& QueryResult)
 {
 	TMap<FGameplayTag, const FCTItemProviderItemSearchQueryItem> QuickSearchMap;
-	Query.GetQuickSearchMap(QuickSearchMap);
+	Query.BuildQuickSearchMap(QuickSearchMap);
 
 	// results per item
-	TMap<FGameplayTag, FCTItemProviderItemSearchQueryResultItem> QuickResultMap;
+	QueryResult.Results.Reserve(Query.Items.Num());
+	for (auto& QueryEntryItem : Query.Items)
+	{
+		QueryResult.Results.Emplace(QueryEntryItem.ItemTag, FCTItemProviderItemSearchQueryResultItem());
+	}
 	
 	for (auto& SlotCategory : InventorySlots)
 	{
@@ -85,7 +130,7 @@ bool UCISBaseInventoryComponent::SearchItems(const FCTItemProviderItemSearchQuer
 			auto CurrentSlotItemTag = Slot->GetRepresentedItemTag();
 			if (auto* SearchQueryEntry = QuickSearchMap.Find(CurrentSlotItemTag))
 			{
-				if (auto* QuickResultEntry = QuickResultMap.Find(CurrentSlotItemTag))
+				if (auto* QuickResultEntry = QueryResult.Results.Find(CurrentSlotItemTag))
 				{
 					FCTItemProviderItemSearchQueryResultItemSlot ResultSlot;
 					ResultSlot.SlotCategoryTag = SlotCategory.Key;
@@ -94,28 +139,12 @@ bool UCISBaseInventoryComponent::SearchItems(const FCTItemProviderItemSearchQuer
 
 					QuickResultEntry->FoundSlots.Emplace(ResultSlot);
 				}
-				else
-				{
-					FCTItemProviderItemSearchQueryResultItem ResultItem;
-					
-					FCTItemProviderItemSearchQueryResultItemSlot ResultSlot;
-					ResultSlot.SlotCategoryTag = SlotCategory.Key;
-					ResultSlot.SlotIndex = Slot->GetSlotIndex();
-					ResultSlot.FoundItemAmount = Slot->GetItemCount();
-
-					ResultItem.FoundSlots.Emplace(ResultSlot);
-					
-					QuickResultMap.Add(CurrentSlotItemTag, ResultItem);
-				}
 			}
 		}
 	}
 
-	QuickResultMap.GenerateValueArray(QueryResult.Results);
-
-	return QueryResult.FoundAllItems();
+	return QueryResult.FoundAllItems(Query.BuildAmountMap());
 }
-
 
 bool UCISBaseInventoryComponent::CraftRecipe(const FCTItemProviderCraftQuery& CraftQuery)
 {
@@ -126,6 +155,8 @@ bool UCISBaseInventoryComponent::CraftRecipe(const FCTItemProviderCraftQuery& Cr
 	if (!bFoundAllItems) { return false; }
 	
 	// step 2: if yes, consume the input items and produce the output items
+	RequestRemove(FCISInventoryRemoveRequest(CraftQuery, SearchQueryResult));
+	RequestAdd(FCISInventoryAddRequest(CraftQuery, InventoryDeveloperSettings->DefaultInventoryCategoryTag));
 
 	return true;
 }
@@ -247,6 +278,17 @@ void UCISBaseInventoryComponent::DeferredCreateItemsFromDefinition(UCISInventory
 	);
 }
 
+void UCISBaseInventoryComponent::DeferredCreateItemsFromTag(UCISInventorySlot* Slot, int32 ItemCount, FGameplayTag ItemTag)
+{
+	if (auto* InventorySubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UCISInventorySubsystem>())
+	{
+		InventorySubsystem->AsyncLoadItemDefinitionsFromItemTags(FGameplayTagContainer(ItemTag), [this, ItemCount, Slot](const TArray<UCISInventoryItemDefinition*>& LoadedItemDefinitions)
+		{
+			DeferredCreateItemsFromDefinition(Slot, ItemCount, LoadedItemDefinitions[0]);
+		});
+	}
+}
+
 	
 	/*----------------------------------------------------------------------------
 		Operations
@@ -294,6 +336,47 @@ void UCISBaseInventoryComponent::RequestMove(FGameplayTag SourceSlotCategory, in
 	}
 }
 
+void UCISBaseInventoryComponent::RequestRemove(const FCISInventoryRemoveRequest& RemoveRequest)
+{
+	// if there is no supplied search query we cant proceed
+	if (!FU_ENSURE(RemoveRequest.ItemSearchQueryResult))
+	{
+		return;
+	}
+	
+	// for each item we want to remove, remove amount until we reach 0
+	for (auto& ItemToRemove : RemoveRequest.Items)
+	{
+		int32 AmountToRemove = ItemToRemove.Amount;
+		auto& QueryResultData = RemoveRequest.ItemSearchQueryResult->Results[ItemToRemove.Tag];
+		for (auto& FoundSlot : QueryResultData.FoundSlots)
+		{
+			auto* Slot = GetSlot(FoundSlot.SlotCategoryTag, FoundSlot.SlotIndex);
+			if (FU_ENSURE(Slot))
+			{
+				// remove the maximum we can
+				int32 LeftAmountToRemove = Slot->RemoveAmount(AmountToRemove, true);
+				AmountToRemove -= LeftAmountToRemove;
+
+				if (AmountToRemove <= 0) { break; }
+			}
+		}
+	}
+}
+
+void UCISBaseInventoryComponent::RequestAdd(const FCISInventoryAddRequest& AddRequest)
+{
+	// for each item, try to find not full and not empty slot then fill free slots
+	for (auto& ItemToAdd : AddRequest.Items)
+	{
+		if (auto* FoundSlot = GetSlotForItemTag(AddRequest.SlotCateogryTag, ItemToAdd.Tag))
+		{
+			// create item
+			DeferredCreateItemsFromTag(FoundSlot, ItemToAdd.Amount, ItemToAdd.Tag);
+		}
+	}
+}
+
 	
 	/*----------------------------------------------------------------------------
 		Utilities
@@ -309,6 +392,24 @@ UCISInventorySlot* UCISBaseInventoryComponent::GetSlot(FGameplayTag SlotCategory
 	}
 
 	return nullptr;
+}
+
+UCISInventorySlot* UCISBaseInventoryComponent::GetSlotForItemTag(FGameplayTag SlotCategory, FGameplayTag ItemTag)
+{
+	UCISInventorySlot* FallbackFreeSlot = nullptr;
+	for (auto& Slot : InventorySlots[SlotCategory].Slots)
+	{
+		// store first empty slot as fallback
+		if (Slot->IsEmpty() && !IsValid(FallbackFreeSlot))
+		{
+			FallbackFreeSlot = Slot.Get();
+		}
+		else if (Slot->GetRepresentedItemTag() == ItemTag)
+		{
+			return Slot.Get();
+		}
+	}
+	return FallbackFreeSlot;
 }
 
 void UCISBaseInventoryComponent::AddItemsToCachedInfo(FGameplayTag ItemTag, int32 Amount)

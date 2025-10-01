@@ -4,15 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "Data/CISInventoryTypes.h"
+#include "Data/Definitions/CISInventoryItemDefinition.h"
+#include "Engine/AssetManager.h"
 #include "Engine/StreamableManager.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "CISInventorySubsystem.generated.h"
 class UCISInventoryItemDefinition;
-
-
-DECLARE_MULTICAST_DELEGATE_OneParam(FCCSOnAsyncLoadItemDefinitionsFromItemTagsFinishedSignature,
-	const TArray<UCISInventoryItemDefinition*>& /* LoadedItemDefinitions */
-);
 
 
 /**
@@ -27,10 +25,10 @@ class COMMONINVENTORYSYSTEM_API UCISInventorySubsystem : public UGameInstanceSub
 	/*----------------------------------------------------------------------------
 		Properties
 	----------------------------------------------------------------------------*/
-public:
-	FCCSOnAsyncLoadItemDefinitionsFromItemTagsFinishedSignature OnAsyncLoadItemDefinitionsFromItemTagsFinishedDelegate;
-
 protected:
+
+
+	
 	/*----------------------------------------------------------------------------
 		Defaults
 	----------------------------------------------------------------------------*/
@@ -46,5 +44,46 @@ public:
 		Core
 	----------------------------------------------------------------------------*/
 public:
-	void AsyncLoadItemDefinitionsFromItemTags(FGameplayTagContainer ItemTags);
+	// delegate needs to impl "const TArray<UCISInventoryItemDefinition*>& LoadedItemDefinitions" as first param
+	template<typename Func>
+	void AsyncLoadItemDefinitionsFromItemTags(FGameplayTagContainer ItemTags, Func OnComplete)
+	{
+		if (auto* AM = UAssetManager::GetIfInitialized())
+		{
+			TArray<FPrimaryAssetId> AssetIds;
+			for (auto& Tag : ItemTags)
+			{
+				AssetIds.Emplace(FPrimaryAssetId(CIS::Core::NAME_InventoryItemDefinitionType, FName(Tag.ToString())));
+			}
+
+			TArray<FName> Bundles;
+			auto LoadHandle = AM->PreloadPrimaryAssets(AssetIds, Bundles, false);
+
+			if (LoadHandle.IsValid())
+			{
+				if (!LoadHandle->HasLoadCompleted())
+				{
+					LoadHandle->BindCompleteDelegate(FStreamableDelegate::CreateWeakLambda(this, [this, LoadHandle, OnComplete]()
+					{
+						TArray<UCISInventoryItemDefinition*> InventoryItemDefs;
+						LoadHandle->GetLoadedAssets<UCISInventoryItemDefinition>(InventoryItemDefs);
+						OnComplete(InventoryItemDefs);
+					}));
+					return;
+				}
+			}
+
+			// Either load already succeeded, or it failed
+			TArray<UCISInventoryItemDefinition*> LoadedItemDefs;
+			for (auto& AssetId : AssetIds)
+			{
+				auto* LiveAsset = AM->GetPrimaryAssetObject<UCISInventoryItemDefinition>(AssetId);
+				if (IsValid(LiveAsset))
+				{
+					LoadedItemDefs.Emplace(LiveAsset);
+				}
+			}
+			OnComplete(LoadedItemDefs);
+		}
+	}
 };

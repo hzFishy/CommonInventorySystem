@@ -23,11 +23,10 @@ void UCCSAsyncAction_AsyncLoadItemDefinitionFromItemTag::Activate()
 	auto* FoundWorld = GEngine->GetWorldFromContextObject(WeakWorldContextObject.Get(), EGetWorldErrorMode::LogAndReturnNull);
 	if (auto* InventorySubsystem = FoundWorld->GetGameInstance()->GetSubsystem<UCISInventorySubsystem>())
 	{
-		InventorySubsystem->OnAsyncLoadItemDefinitionsFromItemTagsFinishedDelegate.AddWeakLambda(this, [this](const auto& LoadedDefinitions)
+		InventorySubsystem->AsyncLoadItemDefinitionsFromItemTags(ItemTags, [this](const TArray<UCISInventoryItemDefinition*>& LoadedItemDefinitions)
 		{
-			OnAsyncLoadItemDefinitionsFromItemTagsFinishedDelegate.Broadcast(LoadedDefinitions);
+			OnAsyncLoadItemDefinitionsFromItemTagsFinishedDelegate.Broadcast(LoadedItemDefinitions);
 			SetReadyToDestroy();
 		});
-		InventorySubsystem->AsyncLoadItemDefinitionsFromItemTags(ItemTags);
 	}
 }

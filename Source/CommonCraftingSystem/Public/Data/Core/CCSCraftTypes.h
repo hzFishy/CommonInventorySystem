@@ -23,6 +23,7 @@ struct COMMONCRAFTINGSYSTEM_API FCCSCraftingRecipeInputEntry
 	GENERATED_BODY()
 
 	FCCSCraftingRecipeInputEntry();
+	FCCSCraftingRecipeInputEntry(const FCCSCraftingWidgetRecipeInputData& InputData);
 
 	
 	UPROPERTY(EditAnywhere, meta=(Categories="Inventory.Items"), BlueprintReadOnly)
@@ -71,6 +72,7 @@ struct COMMONCRAFTINGSYSTEM_API FCCSCraftingRecipeOutput
 	GENERATED_BODY()
 
 	FCCSCraftingRecipeOutput();
+	FCCSCraftingRecipeOutput(const FCCSCraftingWidgetRecipeOutputData& OutputData);
 
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -124,6 +126,9 @@ struct COMMONCRAFTINGSYSTEM_API FCCSCraftingWidgetRecipeInputData
 	
 	UPROPERTY(BlueprintReadOnly)
 	int32 Amount;
+	
+	UPROPERTY(BlueprintReadOnly)
+	FGameplayTag ItemTag;
 };
 USTRUCT(BlueprintType, Displayname="Crafting Widget Recipe Output Data")
 struct COMMONCRAFTINGSYSTEM_API FCCSCraftingWidgetRecipeOutputData
@@ -144,6 +149,9 @@ struct COMMONCRAFTINGSYSTEM_API FCCSCraftingWidgetRecipeOutputData
 	
 	UPROPERTY(BlueprintReadOnly)
 	int32 Amount;
+	
+	UPROPERTY(BlueprintReadOnly)
+	FGameplayTag ItemTag;
 };
 
 USTRUCT(BlueprintType, Displayname="Crafting Widget Recipe Data")

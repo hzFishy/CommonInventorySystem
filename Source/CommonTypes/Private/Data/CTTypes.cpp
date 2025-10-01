@@ -32,18 +32,28 @@ FCTItemProviderItemSearchQueryResultItemSlot::FCTItemProviderItemSearchQueryResu
 FCTItemProviderItemSearchQueryResultItem::FCTItemProviderItemSearchQueryResultItem()
 {}
 
+int32 FCTItemProviderItemSearchQueryResultItem::GetTotalFoundAmount() const
+{
+	int32 Amount = 0;
+	for (auto& FoundSlot : FoundSlots)
+	{
+		Amount += FoundSlot.FoundItemAmount;
+	}
+	return Amount;
+}
+
 FCTItemProviderItemSearchQueryResult::FCTItemProviderItemSearchQueryResult() {}
 
-bool FCTItemProviderItemSearchQueryResult::FoundAllItems() const
+bool FCTItemProviderItemSearchQueryResult::FoundAllItems(const TMap<FGameplayTag, int32>& AmountMap) const
 {
-	for (auto& Result : Results)
+	for (auto& AmountData : AmountMap)
 	{
-		/*if (!Result.bHasEnoughAmount)
+		auto& ResultData = Results[AmountData.Key];
+		if (ResultData.GetTotalFoundAmount() < AmountData.Value)
 		{
 			return false;
-		}*/
+		}
 	}
-	unimplemented();
 	return true;
 }
 
@@ -67,7 +77,7 @@ FCTItemProviderItemSearchQuery::FCTItemProviderItemSearchQuery(const FCTItemProv
 	}
 }
 
-void FCTItemProviderItemSearchQuery::GetQuickSearchMap(TMap<FGameplayTag, const FCTItemProviderItemSearchQueryItem>& OutMap) const
+void FCTItemProviderItemSearchQuery::BuildQuickSearchMap(TMap<FGameplayTag, const FCTItemProviderItemSearchQueryItem>& OutMap) const
 {
 	OutMap.Reserve(Items.Num());
 	
@@ -75,4 +85,14 @@ void FCTItemProviderItemSearchQuery::GetQuickSearchMap(TMap<FGameplayTag, const 
 	{
 		OutMap.Add(Item.ItemTag, Item);
 	}
+}
+
+TMap<FGameplayTag, int32> FCTItemProviderItemSearchQuery::BuildAmountMap() const
+{
+	TMap<FGameplayTag, int32> AmountMap;
+	for (auto& Item : Items)
+	{
+		AmountMap.Add(Item.ItemTag, Item.Amount);
+	}
+	return AmountMap;
 }

@@ -63,12 +63,10 @@ struct COMMONTYPES_API FCTItemProviderItemSearchQueryResultItem
 	
 	/**
 	 * Slots which had the item.
-	 * This doesn't hold all slots, only until it reached the total required amount.
 	 */
 	TArray<FCTItemProviderItemSearchQueryResultItemSlot> FoundSlots;
 	
-	/** In total, do we have the required amount? */
-	bool HasEnoughAmount() const;
+	int32 GetTotalFoundAmount() const;
 };
 
 struct COMMONTYPES_API FCTItemProviderItemSearchQueryResult
@@ -76,9 +74,9 @@ struct COMMONTYPES_API FCTItemProviderItemSearchQueryResult
 	FCTItemProviderItemSearchQueryResult();
 
 	/** Result per searched item */
-	TArray<FCTItemProviderItemSearchQueryResultItem> Results;
+	TMap<FGameplayTag, FCTItemProviderItemSearchQueryResultItem> Results;
 
-	bool FoundAllItems() const;
+	bool FoundAllItems(const TMap<FGameplayTag, int32>& AmountMap) const;
 };
 
 struct COMMONTYPES_API FCTItemProviderItemSearchQueryItem
@@ -99,5 +97,7 @@ struct COMMONTYPES_API FCTItemProviderItemSearchQuery
 	TArray<FCTItemProviderItemSearchQueryItem> Items;
 
 	/** Key: ItemTag, Value: LinkedQueryItem */
-	void GetQuickSearchMap(TMap<FGameplayTag, const FCTItemProviderItemSearchQueryItem>& OutMap) const;
+	void BuildQuickSearchMap(TMap<FGameplayTag, const FCTItemProviderItemSearchQueryItem>& OutMap) const;
+
+	TMap<FGameplayTag, int32> BuildAmountMap() const;
 };
