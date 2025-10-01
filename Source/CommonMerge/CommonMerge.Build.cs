@@ -2,18 +2,17 @@
 
 using UnrealBuildTool;
 
-public class CommonCraftingSystem : ModuleRules
+public class CommonMerge : ModuleRules
 {
-    public CommonCraftingSystem(ReadOnlyTargetRules Target) : base(Target)
+    public CommonMerge(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core", 
-                "CommonTypes",
-                "GameplayTags"
+                "Core",
+                "CommonInventorySystem", "CommonCraftingSystem"
             }
         );
 
@@ -21,8 +20,7 @@ public class CommonCraftingSystem : ModuleRules
             new string[]
             {
                 "CoreUObject", "Engine",
-                "Slate", "SlateCore",
-                "FishyUtils"
+                "Slate", "SlateCore"
             }
         );
     }

@@ -41,4 +41,30 @@ public:
 		UPARAM(meta=(MetaStruct="/Script/CommonInventorySystem.CISBaseInventoryItemFragment")) UScriptStruct* Type,
 		bool bAllowChilds,
 		TInstancedStruct<FCISBaseInventoryItemFragment>& FoundStruct) const;
+
+	template<std::derived_from<FCISBaseInventoryItemFragment> T>
+	const T* GetFragmentFromType()
+	{
+		for (const auto& Fragment : Fragments)
+		{
+			if (const T* FragmentPtr = Fragment.GetPtr<T>())
+			{
+				return FragmentPtr;
+			}
+		}
+		return nullptr;
+	}
+	
+	template<std::derived_from<FCISBaseInventoryItemFragment> T>
+	T* GetMutableFragmentFromType()
+	{
+		for (const auto& Fragment : Fragments)
+		{
+			if (T* FragmentPtr = Fragment.GetPtr<T>())
+			{
+				return FragmentPtr;
+			}
+		}
+		return nullptr;
+	}
 };

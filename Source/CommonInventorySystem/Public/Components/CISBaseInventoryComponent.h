@@ -6,7 +6,7 @@
 #include "GameplayTagContainer.h"
 #include "Components/ActorComponent.h"
 #include "Interfaces/CISInventoryDefinitionInterface.h"
-#include "Interfaces/CTItemProviderInteface.h"
+#include "Interfaces/CTItemProviderInterface.h"
 #include "Logging/FULogging.h"
 #include "CISBaseInventoryComponent.generated.h"
 class UCISInventoryItem;
@@ -47,7 +47,7 @@ COMMONINVENTORYSYSTEM_API DECLARE_LOG_CATEGORY_EXTERN(LogCISInventory, Log, All)
 
 
 UCLASS(ClassGroup=(CommonInventorySystem), DisplayName="Base Inventory Component")
-class COMMONINVENTORYSYSTEM_API UCISBaseInventoryComponent : public UActorComponent, public ICTItemProviderInteface
+class COMMONINVENTORYSYSTEM_API UCISBaseInventoryComponent : public UActorComponent, public ICTItemProviderInterface
 {
 	GENERATED_BODY()
 
@@ -83,8 +83,10 @@ public:
 
 	virtual void OnRegister() override;
 
-	virtual bool ProviderHasItems(FCTItemProviderQuery Query) override;
+	virtual bool SearchItems(const FCTItemProviderItemSearchQuery& Query, FCTItemProviderItemSearchQueryResult& QueryResult) override;
 
+	virtual bool CraftRecipe(const FCTItemProviderCraftQuery& CraftQuery) override;
+	
 	
 	/*----------------------------------------------------------------------------
 		Init

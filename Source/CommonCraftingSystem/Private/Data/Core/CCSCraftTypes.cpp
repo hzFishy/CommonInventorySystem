@@ -24,7 +24,6 @@ FCCSCraftingRecipeOutputEntry::FCCSCraftingRecipeOutputEntry(): Amount(1)
 
 FCCSCraftingRecipeOutput::FCCSCraftingRecipeOutput() {}
 
-
 	
 	/*----------------------------------------------------------------------------
 		Crafting Recipes Search
@@ -36,3 +35,17 @@ FCCSCraftingRecipesSearchResultEntry::FCCSCraftingRecipesSearchResultEntry(UCCSC
 {}
 
 FCCSCraftingRecipesSearchResult::FCCSCraftingRecipesSearchResult() {}
+
+	
+	/*----------------------------------------------------------------------------
+		UI Helpers
+	----------------------------------------------------------------------------*/
+FCCSCraftingWidgetRecipeInputData::FCCSCraftingWidgetRecipeInputData():
+	Amount(0)
+{}
+
+FCCSCraftingWidgetRecipeOutputData::FCCSCraftingWidgetRecipeOutputData():
+	Amount(0)
+{}
+
+FCCSCraftingWidgetRecipeData::FCCSCraftingWidgetRecipeData() {}

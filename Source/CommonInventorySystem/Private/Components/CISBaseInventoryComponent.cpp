@@ -63,18 +63,69 @@ void UCISBaseInventoryComponent::OnRegister()
 	InitFromPresetDefinition();
 }
 
-bool UCISBaseInventoryComponent::ProviderHasItems(FCTItemProviderQuery Query)
+bool UCISBaseInventoryComponent::SearchItems(const FCTItemProviderItemSearchQuery& Query, FCTItemProviderItemSearchQueryResult& QueryResult)
 {
-	for (auto& QueryEntry : Query.Entries)
+	TMap<FGameplayTag, const FCTItemProviderItemSearchQueryItem> QuickSearchMap;
+	Query.GetQuickSearchMap(QuickSearchMap);
+
+	// results per item
+	TMap<FGameplayTag, FCTItemProviderItemSearchQueryResultItem> QuickResultMap;
+	
+	for (auto& SlotCategory : InventorySlots)
 	{
-		if (auto* CacheEntry = CachedInventoryItemInfo.Find(QueryEntry.ItemTag))
+		// we dont search in hotbar
+		if (SlotCategory.Key == InventoryDeveloperSettings->HotbarInventoryCategoryTag) { continue; }
+
+		for (auto& Slot : SlotCategory.Value.Slots)
 		{
-			if (CacheEntry->Amount < QueryEntry.Amount)
+			// skip if empty
+			if (Slot->IsEmpty()) { continue; }
+			
+			// check if this slots contains an item we are interested in
+			auto CurrentSlotItemTag = Slot->GetRepresentedItemTag();
+			if (auto* SearchQueryEntry = QuickSearchMap.Find(CurrentSlotItemTag))
 			{
-				return false;
+				if (auto* QuickResultEntry = QuickResultMap.Find(CurrentSlotItemTag))
+				{
+					FCTItemProviderItemSearchQueryResultItemSlot ResultSlot;
+					ResultSlot.SlotCategoryTag = SlotCategory.Key;
+					ResultSlot.SlotIndex = Slot->GetSlotIndex();
+					ResultSlot.FoundItemAmount = Slot->GetItemCount();
+
+					QuickResultEntry->FoundSlots.Emplace(ResultSlot);
+				}
+				else
+				{
+					FCTItemProviderItemSearchQueryResultItem ResultItem;
+					
+					FCTItemProviderItemSearchQueryResultItemSlot ResultSlot;
+					ResultSlot.SlotCategoryTag = SlotCategory.Key;
+					ResultSlot.SlotIndex = Slot->GetSlotIndex();
+					ResultSlot.FoundItemAmount = Slot->GetItemCount();
+
+					ResultItem.FoundSlots.Emplace(ResultSlot);
+					
+					QuickResultMap.Add(CurrentSlotItemTag, ResultItem);
+				}
 			}
 		}
 	}
+
+	QuickResultMap.GenerateValueArray(QueryResult.Results);
+
+	return QueryResult.FoundAllItems();
+}
+
+
+bool UCISBaseInventoryComponent::CraftRecipe(const FCTItemProviderCraftQuery& CraftQuery)
+{
+	// step 1: see if we got all required items
+	auto SearchQuery = FCTItemProviderItemSearchQuery(CraftQuery);
+	FCTItemProviderItemSearchQueryResult SearchQueryResult;
+	const bool bFoundAllItems = SearchItems(SearchQuery, SearchQueryResult);
+	if (!bFoundAllItems) { return false; }
+	
+	// step 2: if yes, consume the input items and produce the output items
 
 	return true;
 }

@@ -1,10 +1,12 @@
 ﻿// By hzFishy - 2025 - Do whatever you want with it.
 
 #pragma once
+
 #include "GameplayTagContainer.h"
 
 #include "CCSCraftTypes.generated.h"
 class UCCSCraftingRecipeDefinition;
+
 
 namespace CCS::Core
 {
@@ -80,7 +82,7 @@ struct COMMONCRAFTINGSYSTEM_API FCCSCraftingRecipeOutput
 		Crafting Recipes Search
 	----------------------------------------------------------------------------*/
 USTRUCT(BlueprintType, DisplayName="Crafting Recipes Search Result Entry")
-struct FCCSCraftingRecipesSearchResultEntry
+struct COMMONCRAFTINGSYSTEM_API FCCSCraftingRecipesSearchResultEntry
 {
 	GENERATED_BODY()
 
@@ -92,7 +94,7 @@ struct FCCSCraftingRecipesSearchResultEntry
 };
 
 USTRUCT(BlueprintType, DisplayName="Crafting Recipes Search Result")
-struct FCCSCraftingRecipesSearchResult
+struct COMMONCRAFTINGSYSTEM_API FCCSCraftingRecipesSearchResult
 {
 	GENERATED_BODY()
 
@@ -100,4 +102,61 @@ struct FCCSCraftingRecipesSearchResult
 
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FCCSCraftingRecipesSearchResultEntry> Entries;
+};
+
+	
+	/*----------------------------------------------------------------------------
+		UI Helpers
+	----------------------------------------------------------------------------*/
+USTRUCT(BlueprintType, Displayname="Crafting Widget Recipe Input Data")
+struct COMMONCRAFTINGSYSTEM_API FCCSCraftingWidgetRecipeInputData
+{
+	GENERATED_BODY()
+
+	FCCSCraftingWidgetRecipeInputData();
+
+	
+	UPROPERTY(BlueprintReadOnly)
+	FText DisplayName;
+
+	UPROPERTY(BlueprintReadOnly)
+	TSoftObjectPtr<UTexture2D> SoftIconTexture;
+	
+	UPROPERTY(BlueprintReadOnly)
+	int32 Amount;
+};
+USTRUCT(BlueprintType, Displayname="Crafting Widget Recipe Output Data")
+struct COMMONCRAFTINGSYSTEM_API FCCSCraftingWidgetRecipeOutputData
+{
+	GENERATED_BODY()
+
+	FCCSCraftingWidgetRecipeOutputData();
+
+	
+	UPROPERTY(BlueprintReadOnly)
+	FText DisplayName;
+
+	UPROPERTY(BlueprintReadOnly)
+	FText Tooltip;
+	
+	UPROPERTY(BlueprintReadOnly)
+	TSoftObjectPtr<UTexture2D> SoftIconTexture;
+	
+	UPROPERTY(BlueprintReadOnly)
+	int32 Amount;
+};
+
+USTRUCT(BlueprintType, Displayname="Crafting Widget Recipe Data")
+struct COMMONCRAFTINGSYSTEM_API FCCSCraftingWidgetRecipeData
+{
+	GENERATED_BODY()
+
+	FCCSCraftingWidgetRecipeData();
+	
+
+	UPROPERTY(BlueprintReadOnly)
+	FCCSCraftingWidgetRecipeOutputData OutputData;
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FCCSCraftingWidgetRecipeInputData> InputData;
 };
