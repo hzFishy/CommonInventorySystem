@@ -6,7 +6,13 @@
 #include "Core/CISInventoryItem.h"
 
 
-FCISInventorySlotUpdateInfo::FCISInventorySlotUpdateInfo() {}
+FCISInventorySlotUpdateInfo::FCISInventorySlotUpdateInfo():
+	Amount(-1)
+{}
+
+FCISInventorySlotUpdateInfo::FCISInventorySlotUpdateInfo(int32 NewAmount):
+	Amount(NewAmount)
+{}
 
 	
 	/*----------------------------------------------------------------------------
@@ -94,7 +100,7 @@ void UCISInventorySlot::ClearAllItems(bool bCallUpdate)
 
 void UCISInventorySlot::CallUpdate()
 {
-	OnSlotUpdatedDelegate.Broadcast(this, FCISInventorySlotUpdateInfo());
+	OnSlotUpdatedDelegate.Broadcast(this, FCISInventorySlotUpdateInfo(GetItemCount()));
 }
 
 FGameplayTag UCISInventorySlot::GetRepresentedItemTag() const

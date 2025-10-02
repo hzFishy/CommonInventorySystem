@@ -40,3 +40,19 @@ struct TStructOpsTypeTraits<FCISAsyncInventoryItemDefinitionRequest> : public TS
 		WithIdenticalViaEquality = true,
 	};
 };
+
+
+USTRUCT(BlueprintType, DisplayName="Hotbar Changed Event")
+struct COMMONINVENTORYSYSTEM_API FCISHotbarChangedEvent
+{
+	GENERATED_BODY()
+
+	FCISHotbarChangedEvent();
+	FCISHotbarChangedEvent(int32 InOldIndex, int32 InNewIndex);
+
+	UPROPERTY(BlueprintReadWrite)
+	int32 OldIndex;
+	
+	UPROPERTY(BlueprintReadWrite)
+	int32 NewIndex;
+};

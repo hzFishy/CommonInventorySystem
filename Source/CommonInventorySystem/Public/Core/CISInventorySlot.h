@@ -14,6 +14,10 @@ struct COMMONINVENTORYSYSTEM_API FCISInventorySlotUpdateInfo
 	GENERATED_BODY()
 
 	FCISInventorySlotUpdateInfo();
+	FCISInventorySlotUpdateInfo(int32 NewAmount);
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 Amount;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCISOnInventorySlotUpdatedSignature,

@@ -4,7 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "CISBaseInventoryComponent.h"
+#include "Data/CISInventoryTypes.h"
 #include "CISPlayerInventoryComponent.generated.h"
+
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCISOnPlayerInventorySelectedHotbarSlotChangedSignature,
+	UCISPlayerInventoryComponent*, PlayerInventoryComponent,
+	const FCISHotbarChangedEvent&, HotbarChangedEvent
+);
 
 
 UCLASS(ClassGroup=(CommonInventorySystem), DisplayName="Player Inventory Component", meta=(BlueprintSpawnableComponent))
@@ -14,16 +21,61 @@ class COMMONINVENTORYSYSTEM_API UCISPlayerInventoryComponent : public UCISBaseIn
 
 	
 	/*----------------------------------------------------------------------------
+		Properties
+	----------------------------------------------------------------------------*/
+public:
+	UPROPERTY(BlueprintAssignable, DisplayName="On Selected Hotbar Slot Changed")
+	FCISOnPlayerInventorySelectedHotbarSlotChangedSignature OnSelectedHotbarSlotChangedDelegate;
+	
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="CommonInventorySystem")
+	TOptional<int32> InitialSelectedHotbarIndexSlot;
+
+	bool bInitialSelectedHotbarIndexSlotApplied;
+	int32 HotbarMaxIndex;
+	int32 CurrentSelectedSlotIndex;
+	int32 FreezeSelectedSlotCount;
+	
+	
+	/*----------------------------------------------------------------------------
 		Defaults
 	----------------------------------------------------------------------------*/
 public:
 	UCISPlayerInventoryComponent();
 
-
+	virtual void InitializeComponent() override;
+	
+	
 	/*----------------------------------------------------------------------------
 		Init
 	----------------------------------------------------------------------------*/
 protected:
 	virtual void OnInventoryItemDefinitionsLoaded(TSoftClassPtr<UCISInventorySlot> SoftInventorySlotClass,
 		TArray<FCISInventorySlotDefinition> SlotDefinitions) override;
+
+	
+	/*----------------------------------------------------------------------------
+		Hotbar
+	----------------------------------------------------------------------------*/
+public:
+	UFUNCTION(BlueprintPure, Category="CommonInventorySystem")
+	bool IsInitialSelectedHotbarIndexSlotApplied() const { return bInitialSelectedHotbarIndexSlotApplied; };
+
+	UFUNCTION(BlueprintPure, Category="CommonInventorySystem")
+	int32 GetCurrentSelectedSlotIndex() const { return CurrentSelectedSlotIndex; }
+	
+	UFUNCTION(BlueprintCallable, Category="CommonInventorySystem")
+	void IncrementSelectedHotbarSlot();
+	
+	UFUNCTION(BlueprintCallable, Category="CommonInventorySystem")
+	void DecrementSelectedHotbarSlot();
+
+	UFUNCTION(BlueprintCallable, Category="CommonInventorySystem")
+	void FreezeSelectedSlot();
+	
+	UFUNCTION(BlueprintCallable, Category="CommonInventorySystem")
+	void UnFreezeSelectedSlot();
+	
+protected:
+	void UpdateSelectedHotbarSlot(int32 AdditiveIndex);
 };

@@ -118,9 +118,6 @@ bool UCISBaseInventoryComponent::SearchItems(const FCTItemProviderItemSearchQuer
 	
 	for (auto& SlotCategory : InventorySlots)
 	{
-		// we dont search in hotbar
-		if (SlotCategory.Key == InventoryDeveloperSettings->HotbarInventoryCategoryTag) { continue; }
-
 		for (auto& Slot : SlotCategory.Value.Slots)
 		{
 			// skip if empty

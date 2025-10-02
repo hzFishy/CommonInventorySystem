@@ -3,7 +3,7 @@
 	"Version": 1,
 	"VersionName": "1.0",
 	"FriendlyName": "CommonInventorySystem",
-	"Description": "Basic implementation of an inventory system. Supporting default slots and a seperate hotbar.",
+	"Description": "Basic implementation of an inventory system. Supporting default slots and a separate hotbar.",
 	"Category": "Utilities",
 	"CreatedBy": "hzFishy",
 	"CreatedByURL": "https://hzfishy.fr",

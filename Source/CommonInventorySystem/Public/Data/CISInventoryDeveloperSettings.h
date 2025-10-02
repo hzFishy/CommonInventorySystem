@@ -25,4 +25,7 @@ public:
 	
 	UPROPERTY(Config, EditAnywhere, meta=(Categories="Inventory.Categories"))
 	FGameplayTag HotbarInventoryCategoryTag;
+	
+	UPROPERTY(Config, EditAnywhere, meta=(Categories="Inventory.Traits"))
+	FGameplayTag InventoryEquipableTrait;
 };
