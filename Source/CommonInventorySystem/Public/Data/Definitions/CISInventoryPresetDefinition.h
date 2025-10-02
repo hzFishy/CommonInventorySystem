@@ -27,7 +27,7 @@ public:
 	TSoftClassPtr<UCISInventorySlot> SlotClass;
 	
 	/** Default items, the inventory slots size will match with the size of this array */
-	UPROPERTY(EditAnywhere, Category="CommonInventorySystem")
+	UPROPERTY(EditAnywhere, Category="CommonInventorySystem", meta=(TitleProperty="{SoftItemDefinition} x{Count}"))
 	TArray<FCISInventorySlotDefinition> SlotDefinitions;
 
 	

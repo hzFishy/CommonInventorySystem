@@ -36,6 +36,13 @@ FCCSCraftingRecipeOutput::FCCSCraftingRecipeOutput(const FCCSCraftingWidgetRecip
 	Entry.Amount = OutputData.Amount;
 }
 
+
+	
+	/*----------------------------------------------------------------------------
+		Crafting Recipe
+	----------------------------------------------------------------------------*/
+FCCSCraftingRecipe::FCCSCraftingRecipe() {}
+
 	
 	/*----------------------------------------------------------------------------
 		Crafting Recipes Search

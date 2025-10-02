@@ -26,7 +26,7 @@ class COMMONINVENTORYSYSTEM_API UCISInventorySubsystem : public UGameInstanceSub
 		Properties
 	----------------------------------------------------------------------------*/
 protected:
-
+	uint32 HighestAsyncRequestId;
 
 	
 	/*----------------------------------------------------------------------------
@@ -86,4 +86,6 @@ public:
 			OnComplete(LoadedItemDefs);
 		}
 	}
+
+	FCISAsyncInventoryItemDefinitionRequest MakeAsyncItemDefinitionRequest();
 };

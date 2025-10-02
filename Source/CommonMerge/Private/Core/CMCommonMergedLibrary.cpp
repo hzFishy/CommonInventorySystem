@@ -11,10 +11,16 @@
 FCCSCraftingWidgetRecipeData UCMCommonMergedLibrary::CollectCraftingWidgetRecipeDataFromInventoryItems(
 	UCISInventoryItemDefinition* OutputItemDefinition,
 	const TArray<UCISInventoryItemDefinition*>& InputItemDefinitions,
-	const FCCSCraftingRecipeOutputEntry& CraftingRecipeOutputEntry,
-	const TArray<FCCSCraftingRecipeInputEntry>& CraftingRecipeInputEntries)
+	const FCCSCraftingRecipe& CraftingRecipe)
 {
-	FU_ENSURE(InputItemDefinitions.Num() == CraftingRecipeInputEntries.Num());
+	if (!FU_ENSURE_VALID(OutputItemDefinition))
+	{
+		return FCCSCraftingWidgetRecipeData();
+	}
+	if (!FU_ENSURE(InputItemDefinitions.Num() == CraftingRecipe.CraftingRecipeInput.Entries.Num()))
+	{
+		return FCCSCraftingWidgetRecipeData();
+	}
 	
 	FCCSCraftingWidgetRecipeData RecipeData;
 
@@ -23,14 +29,14 @@ FCCSCraftingWidgetRecipeData UCMCommonMergedLibrary::CollectCraftingWidgetRecipe
 		RecipeData.OutputData.DisplayName = OutputUIFragment->DisplayName;
 		RecipeData.OutputData.Tooltip = OutputUIFragment->Tooltip;
 		RecipeData.OutputData.SoftIconTexture = OutputUIFragment->Icon;
-		RecipeData.OutputData.Amount = CraftingRecipeOutputEntry.Amount;
-		RecipeData.OutputData.ItemTag = CraftingRecipeOutputEntry.ItemTag;
+		RecipeData.OutputData.Amount = CraftingRecipe.CraftingRecipeOutput.Entry.Amount;
+		RecipeData.OutputData.ItemTag = CraftingRecipe.CraftingRecipeOutput.Entry.ItemTag;
 	}
 
 	for (int i = 0; i < InputItemDefinitions.Num(); ++i)
 	{
 		auto& InputItemDefinition = InputItemDefinitions[i];
-		auto& CraftingRecipeInputEntry = CraftingRecipeInputEntries[i];
+		auto& CraftingRecipeInputEntry = CraftingRecipe.CraftingRecipeInput.Entries[i];
 		
 		FCCSCraftingWidgetRecipeInputData InputDataEntry;
 		if (auto* InputUIFragment = InputItemDefinition->GetFragmentFromType<FCISUIInventoryItemFragment>())

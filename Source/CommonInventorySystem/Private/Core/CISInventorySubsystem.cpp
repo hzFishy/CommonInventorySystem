@@ -8,7 +8,9 @@
 	/*----------------------------------------------------------------------------
 		Defaults
 	----------------------------------------------------------------------------*/
-UCISInventorySubsystem::UCISInventorySubsystem() {}
+UCISInventorySubsystem::UCISInventorySubsystem():
+	HighestAsyncRequestId(0)
+{}
 
 void UCISInventorySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -24,3 +26,8 @@ void UCISInventorySubsystem::Deinitialize()
 	/*----------------------------------------------------------------------------
 		Core
 	----------------------------------------------------------------------------*/
+FCISAsyncInventoryItemDefinitionRequest UCISInventorySubsystem::MakeAsyncItemDefinitionRequest()
+{
+	HighestAsyncRequestId++;
+	return FCISAsyncInventoryItemDefinitionRequest(HighestAsyncRequestId);
+}

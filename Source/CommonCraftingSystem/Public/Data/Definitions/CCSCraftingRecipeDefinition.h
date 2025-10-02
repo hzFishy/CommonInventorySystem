@@ -21,12 +21,6 @@ public:
 	virtual FPrimaryAssetId GetPrimaryAssetId() const override;
 
 	
-	UPROPERTY(EditAnywhere, Category="Input", BlueprintReadOnly)
-	FCCSCraftingRecipeInput CraftingRecipeInput;
-	
-	UPROPERTY(EditAnywhere, Category="Output", BlueprintReadOnly)
-	FCCSCraftingRecipeOutput CraftingRecipeOutput;
-
-	// TODO: add crafting fragments for modular behavior, for example "how long does the craft takes", "some level the player must have for the craft"
-
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(ShowOnlyInnerProperties))
+	FCCSCraftingRecipe CraftingRecipe;
 };

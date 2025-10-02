@@ -17,7 +17,7 @@ namespace CCS::Core
 	/*----------------------------------------------------------------------------
 		Crafting Input
 	----------------------------------------------------------------------------*/
-USTRUCT(BlueprintType, DisplayName="Crafting Recipe Input Entry", BlueprintType)
+USTRUCT(BlueprintType, DisplayName="Crafting Recipe Input Entry")
 struct COMMONCRAFTINGSYSTEM_API FCCSCraftingRecipeInputEntry
 {
 	GENERATED_BODY()
@@ -34,7 +34,7 @@ struct COMMONCRAFTINGSYSTEM_API FCCSCraftingRecipeInputEntry
 };
 
 
-USTRUCT(BlueprintType, DisplayName="Crafting Recipe Input", BlueprintType)
+USTRUCT(BlueprintType, DisplayName="Crafting Recipe Input")
 struct COMMONCRAFTINGSYSTEM_API FCCSCraftingRecipeInput
 {
 	GENERATED_BODY()
@@ -50,7 +50,7 @@ struct COMMONCRAFTINGSYSTEM_API FCCSCraftingRecipeInput
 	/*----------------------------------------------------------------------------
 		Crafting Output
 	----------------------------------------------------------------------------*/
-USTRUCT(BlueprintType, DisplayName="Crafting Recipe Output Entry", BlueprintType)
+USTRUCT(BlueprintType, DisplayName="Crafting Recipe Output Entry")
 struct COMMONCRAFTINGSYSTEM_API FCCSCraftingRecipeOutputEntry
 {
 	GENERATED_BODY()
@@ -65,8 +65,7 @@ struct COMMONCRAFTINGSYSTEM_API FCCSCraftingRecipeOutputEntry
 	int32 Amount;
 };
 
-
-USTRUCT(BlueprintType, DisplayName="Crafting Recipe Output", BlueprintType)
+USTRUCT(BlueprintType, DisplayName="Crafting Recipe Output")
 struct COMMONCRAFTINGSYSTEM_API FCCSCraftingRecipeOutput
 {
 	GENERATED_BODY()
@@ -77,6 +76,27 @@ struct COMMONCRAFTINGSYSTEM_API FCCSCraftingRecipeOutput
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FCCSCraftingRecipeOutputEntry Entry;
+};
+
+
+	/*----------------------------------------------------------------------------
+		Crafting Recipe
+	----------------------------------------------------------------------------*/
+USTRUCT(BlueprintType, DisplayName="Crafting Recipe")
+struct COMMONCRAFTINGSYSTEM_API FCCSCraftingRecipe
+{
+	GENERATED_BODY()
+	
+	FCCSCraftingRecipe();
+
+	UPROPERTY(EditAnywhere, Category="Input", BlueprintReadOnly)
+	FCCSCraftingRecipeInput CraftingRecipeInput;
+	
+	UPROPERTY(EditAnywhere, Category="Output", BlueprintReadOnly)
+	FCCSCraftingRecipeOutput CraftingRecipeOutput;
+
+	// TODO: add crafting fragments for modular behavior,
+	// for example "how long does the craft takes", "some level the player must have for the craft"
 };
 
 	
@@ -130,6 +150,7 @@ struct COMMONCRAFTINGSYSTEM_API FCCSCraftingWidgetRecipeInputData
 	UPROPERTY(BlueprintReadOnly)
 	FGameplayTag ItemTag;
 };
+
 USTRUCT(BlueprintType, Displayname="Crafting Widget Recipe Output Data")
 struct COMMONCRAFTINGSYSTEM_API FCCSCraftingWidgetRecipeOutputData
 {
