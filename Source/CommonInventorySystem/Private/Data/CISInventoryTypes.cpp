@@ -22,3 +22,27 @@ FCISHotbarChangedEvent::FCISHotbarChangedEvent(int32 InOldIndex, int32 InNewInde
 	OldIndex(InOldIndex),
 	NewIndex(InNewIndex)
 {}
+
+
+FCISInventoryHotbarSelection::FCISInventoryHotbarSelection():
+	RealGameTime(-1)
+{}
+
+void FCISInventoryHotbarSelection::SetNewChange(float InGameTime)
+{
+	RealGameTime = InGameTime;
+}
+
+void FCISInventoryHotbarSelection::SetActor(AActor* InItemActor)
+{
+	ItemActor = InItemActor;
+}
+
+void FCISInventoryHotbarSelection::Clear()
+{
+	if (ItemActor.IsValid())
+	{
+		ItemActor->Destroy();
+	}
+	ItemActor.Reset();
+}

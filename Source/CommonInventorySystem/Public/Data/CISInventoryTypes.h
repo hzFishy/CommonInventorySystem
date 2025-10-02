@@ -1,6 +1,7 @@
 ﻿// By hzFishy - 2025 - Do whatever you want with it.
 
 #pragma once
+#include "Components/WidgetComponent.h"
 
 #include "CISInventoryTypes.generated.h"
 
@@ -55,4 +56,24 @@ struct COMMONINVENTORYSYSTEM_API FCISHotbarChangedEvent
 	
 	UPROPERTY(BlueprintReadWrite)
 	int32 NewIndex;
+};
+
+
+struct COMMONINVENTORYSYSTEM_API FCISInventoryHotbarSelection
+{
+	FCISInventoryHotbarSelection();
+	
+	void SetNewChange(float InGameTime);
+	
+	void SetActor(AActor* InItemActor);
+
+	float GetSetRealTime() const { return RealGameTime; }
+	
+	void Clear();
+
+protected:
+	/** The item actor we spawned in the world */
+	TWeakObjectPtr<AActor> ItemActor;
+	/** Used to detect race conditions between deferred spawn request */
+	float RealGameTime;
 };

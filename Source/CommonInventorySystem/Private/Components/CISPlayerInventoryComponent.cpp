@@ -39,6 +39,10 @@ void UCISPlayerInventoryComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
 
+#if WITH_EDITOR
+	FU_UTILS_EDITOR_RETURN_NOTGAMEWORLD
+#endif
+	
 	if (InitialSelectedHotbarIndexSlot.IsSet())
 	{
 		UpdateSelectedHotbarSlot(CurrentSelectedSlotIndex + 2 + InitialSelectedHotbarIndexSlot.GetValue());
@@ -76,6 +80,11 @@ void UCISPlayerInventoryComponent::OnInventoryItemDefinitionsLoaded(TSoftClassPt
 	/*----------------------------------------------------------------------------
 		Hotbar
 	----------------------------------------------------------------------------*/
+void UCISPlayerInventoryComponent::SetHotbarEquipComponent(UPrimitiveComponent* Component)
+{
+	HotbarEquipComponent = Component;
+}
+
 void UCISPlayerInventoryComponent::IncrementSelectedHotbarSlot()
 {
 	UpdateSelectedHotbarSlot(1);
@@ -100,6 +109,37 @@ void UCISPlayerInventoryComponent::UnFreezeSelectedSlot()
 	}
 }
 
+void UCISPlayerInventoryComponent::DeferredSpawnEquipedItem(const TSoftClassPtr<AActor>& SoftActorClass, float ChangeGameTime)
+{
+	if (auto* AM = UAssetManager::GetIfInitialized())
+	{
+		AM->GetStreamableManager().RequestAsyncLoad(
+			SoftActorClass.ToSoftObjectPath(),
+			FStreamableDelegate::CreateWeakLambda(this, [this, SoftActorClass, ChangeGameTime]
+			{
+				// see if another request got sent since last time
+				if (CurrentHotbarSelection.GetSetRealTime() <= ChangeGameTime)
+				{
+					if (auto* LoadedClass = SoftActorClass.Get())
+					{
+						FActorSpawnParameters SpawnParameters;
+						auto* SpawnedItemActor = GetWorld()->SpawnActor<AActor>(LoadedClass, SpawnParameters);
+
+						auto AttachmentTransformRules = FAttachmentTransformRules::SnapToTargetNotIncludingScale;
+						SpawnedItemActor->AttachToComponent(
+							HotbarEquipComponent.Get(),
+							AttachmentTransformRules,
+							HotbarEquipSocket
+						);
+						
+						CurrentHotbarSelection.SetActor(SpawnedItemActor);
+					}
+				}
+			})
+		);
+	}
+}
+
 void UCISPlayerInventoryComponent::UpdateSelectedHotbarSlot(int32 AdditiveIndex)
 {
 	if (FreezeSelectedSlotCount > 0) { return; }
@@ -121,17 +161,23 @@ void UCISPlayerInventoryComponent::UpdateSelectedHotbarSlot(int32 AdditiveIndex)
 		FCISHotbarChangedEvent(OldHotbarIndex, CurrentSelectedSlotIndex)
 	);
 
-
 	if (auto* SelectedHotbarSlot = GetSlot(InventoryDeveloperSettings->HotbarInventoryCategoryTag, CurrentSelectedSlotIndex))
 	{
-		// TODO: remove previous equiped item (if any)
+		CurrentHotbarSelection.Clear();
 		
 		if (!SelectedHotbarSlot->IsEmpty()
-			|| !SelectedHotbarSlot->GetRepresentedItem()->HasTrait(InventoryDeveloperSettings->InventoryEquipableTrait))
+			&& SelectedHotbarSlot->GetRepresentedItem()->HasTrait(InventoryDeveloperSettings->InventoryEquipableTrait))
 		{
 			if (const auto* ActorItemFragment = SelectedHotbarSlot->GetRepresentedItem()->GetFragmentFromType<FCISActorInventoryItemFragment>())
 			{
-				// TODO: update equipped item
+				if (FU_ENSURE_WEAKVALID_MSG(HotbarEquipComponent, "HotbarEquipComponent is invalid")
+					&& FU_ENSURE_WEAKNOTNULL_MSG(ActorItemFragment->SoftActorClass, "ActorItemFragment->SoftActorClass is not set"))
+				{
+					// update equipped item
+					const float GameTime = GetWorld()->GetRealTimeSeconds();
+					CurrentHotbarSelection.SetNewChange(GameTime);
+					DeferredSpawnEquipedItem(ActorItemFragment->SoftActorClass, GameTime);
+				}
 			}
 		}
 	}

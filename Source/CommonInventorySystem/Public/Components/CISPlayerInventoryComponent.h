@@ -31,10 +31,15 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="CommonInventorySystem")
 	TOptional<int32> InitialSelectedHotbarIndexSlot;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="CommonInventorySystem")
+	FName HotbarEquipSocket;
+	
+	TWeakObjectPtr<UPrimitiveComponent> HotbarEquipComponent;
 	bool bInitialSelectedHotbarIndexSlotApplied;
 	int32 HotbarMaxIndex;
 	int32 CurrentSelectedSlotIndex;
 	int32 FreezeSelectedSlotCount;
+	FCISInventoryHotbarSelection CurrentHotbarSelection;
 	
 	
 	/*----------------------------------------------------------------------------
@@ -58,6 +63,9 @@ protected:
 		Hotbar
 	----------------------------------------------------------------------------*/
 public:
+	UFUNCTION(BlueprintCallable, Category="CommonInventorySystem")
+	void SetHotbarEquipComponent(UPrimitiveComponent* Component);
+	
 	UFUNCTION(BlueprintPure, Category="CommonInventorySystem")
 	bool IsInitialSelectedHotbarIndexSlotApplied() const { return bInitialSelectedHotbarIndexSlotApplied; };
 
@@ -75,6 +83,8 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="CommonInventorySystem")
 	void UnFreezeSelectedSlot();
+
+	void DeferredSpawnEquipedItem(const TSoftClassPtr<AActor>& SoftActorClass, float ChangeGameTime);
 	
 protected:
 	void UpdateSelectedHotbarSlot(int32 AdditiveIndex);
