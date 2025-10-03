@@ -324,8 +324,12 @@ bool UCISBaseInventoryComponent::CraftRecipe(const FCTItemProviderCraftQuery& Cr
 void UCISBaseInventoryComponent::InitFromPresetDefinition()
 {
 	if (InventoryPresetDefinition.IsNull()) { return; }
-	
-	if (auto* AM = UAssetManager::GetIfInitialized())
+
+	if (InventoryPresetDefinition.IsValid())
+	{
+		OnInventoryPresetDefinitionLoaded();
+	}
+	else if (auto* AM = UAssetManager::GetIfInitialized())
 	{
 		AM->GetStreamableManager().RequestAsyncLoad(
 			InventoryPresetDefinition.ToSoftObjectPath(),
@@ -422,22 +426,39 @@ UCISInventorySlot* UCISBaseInventoryComponent::CreateSlotFromDefinition(FGamepla
 
 void UCISBaseInventoryComponent::DeferredCreateItemsFromDefinition(UCISInventorySlot* Slot, int32 ItemCount, UCISInventoryItemDefinition* ItemDefinition)
 {
-	UAssetManager::GetIfInitialized()->GetStreamableManager().RequestAsyncLoad(
-		ItemDefinition->ItemClass.ToSoftObjectPath(),
-		FStreamableDelegate::CreateWeakLambda(this, [this, Slot, ItemCount, ItemDefinition]()
-		{
-			for (int32 i = 0; i < ItemCount; i++)
+	if (ItemDefinition->ItemClass.IsValid())
+	{
+		GetWorld()->GetTimerManager().SetTimerForNextTick(
+			FTimerDelegate::CreateWeakLambda(this, [this, Slot, ItemCount, ItemDefinition]()
 			{
-				auto* NewItem = NewObject<UCISInventoryItem>(Slot, ItemDefinition->ItemClass.Get());
-				NewItem->InitFromDefinition(ItemDefinition);
-				Slot->AddItem(NewItem, false);
-			}
+				CreateItemsFromLoadedDefinition(Slot, ItemCount, ItemDefinition);
+			})
+		);
+	}
+	else
+	{
+		UAssetManager::GetIfInitialized()->GetStreamableManager().RequestAsyncLoad(
+			ItemDefinition->ItemClass.ToSoftObjectPath(),
+			FStreamableDelegate::CreateWeakLambda(this, [this, Slot, ItemCount, ItemDefinition]()
+			{
+				CreateItemsFromLoadedDefinition(Slot, ItemCount, ItemDefinition);
+			}),
+			FStreamableManager::AsyncLoadHighPriority
+		);
+	}
+}
 
-			AddItemsToCachedInfo(Slot, Slot->GetRepresentedItemTag(), ItemCount);
-			Slot->CallUpdate();
-		}),
-		FStreamableManager::AsyncLoadHighPriority
-	);
+void UCISBaseInventoryComponent::CreateItemsFromLoadedDefinition(UCISInventorySlot* Slot, int32 ItemCount, UCISInventoryItemDefinition* ItemDefinition)
+{
+	for (int32 i = 0; i < ItemCount; i++)
+	{
+		auto* NewItem = NewObject<UCISInventoryItem>(Slot, ItemDefinition->ItemClass.Get());
+		NewItem->InitFromDefinition(ItemDefinition);
+		Slot->AddItem(NewItem, false);
+	}
+
+	AddItemsToCachedInfo(Slot, Slot->GetRepresentedItemTag(), ItemCount);
+	Slot->CallUpdate();
 }
 
 void UCISBaseInventoryComponent::DeferredCreateItemsFromTag(UCISInventorySlot* Slot, int32 ItemCount, FGameplayTag ItemTag)
@@ -555,21 +576,28 @@ void UCISBaseInventoryComponent::K2_RequestAdd(FCISInventoryAddRequestBlueprint 
 			if (auto* InventorySubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UCISInventorySubsystem>())
 			{
 				// TODO (perf): instead of doing an async request per item it would be better to do a batch
-				if (auto* AM = UAssetManager::GetIfInitialized())
+
+				auto ExecuteRequestAdd = [this, FoundSlot, Entry]()
+				{
+					auto* LoadedDefinition = Entry.SoftItemDefinition.Get();
+					if (!FU_ENSURE_MSG(LoadedDefinition->Tag == Entry.ItemTag,
+						"AddRequestBlueprint: item tag and item definition are different"))
+					{
+						return;
+					}
+							
+					DeferredCreateItemsFromDefinition(FoundSlot, Entry.Amount, LoadedDefinition);
+				};
+				
+				if (Entry.SoftItemDefinition.IsValid())
+				{
+					ExecuteRequestAdd();
+				}
+				else if (auto* AM = UAssetManager::GetIfInitialized())
 				{
 					AM->GetStreamableManager().RequestAsyncLoad(
 						Entry.SoftItemDefinition.ToSoftObjectPath(),
-						FStreamableDelegate::CreateWeakLambda(this, [this, FoundSlot, Entry]()
-						{
-							auto* LoadedDefinition = Entry.SoftItemDefinition.Get();
-							if (!FU_ENSURE_MSG(LoadedDefinition->Tag == Entry.ItemTag,
-								"AddRequestBlueprint: item tag and item definition are different"))
-							{
-								return;
-							}
-							
-							DeferredCreateItemsFromDefinition(FoundSlot, Entry.Amount, LoadedDefinition);
-						})
+						FStreamableDelegate::CreateWeakLambda(this, ExecuteRequestAdd)
 					);
 				}
 			}
