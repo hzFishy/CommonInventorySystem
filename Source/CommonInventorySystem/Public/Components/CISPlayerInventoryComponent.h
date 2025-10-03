@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "CISBaseInventoryComponent.h"
+#include "Core/CISInventorySlot.h"
 #include "Data/CISInventoryTypes.h"
 #include "CISPlayerInventoryComponent.generated.h"
 
@@ -48,8 +49,6 @@ protected:
 public:
 	UCISPlayerInventoryComponent();
 
-	virtual void InitializeComponent() override;
-	
 	
 	/*----------------------------------------------------------------------------
 		Init
@@ -88,4 +87,8 @@ public:
 	
 protected:
 	void UpdateSelectedHotbarSlot(int32 AdditiveIndex);
+
+	void SpawnActorForCurrentHotbarSelection();
+	
+	UFUNCTION() void OnInventorySlotUpdatedCallback(UCISInventorySlot* Slot, const FCISInventorySlotUpdateInfo& UpdateInfo);
 };

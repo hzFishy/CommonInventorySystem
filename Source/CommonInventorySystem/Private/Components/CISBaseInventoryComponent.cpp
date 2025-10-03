@@ -387,6 +387,12 @@ void UCISBaseInventoryComponent::OnInventoryItemDefinitionsLoaded(TSoftClassPtr<
 		OnInventorySlotAddedDelegate.Broadcast(DefaultInventoryTag, NewSlot.Get());
 	}
 	bSlotsCreated = true;
+	OnInitialSlotsDoneInitialization();
+}
+
+void UCISBaseInventoryComponent::OnInitialSlotsDoneInitialization()
+{
+	
 }
 
 UCISInventorySlot* UCISBaseInventoryComponent::CreateSlot(FGameplayTag SlotCategory, int32 SlotIndex)
@@ -544,7 +550,7 @@ void UCISBaseInventoryComponent::K2_RequestAdd(FCISInventoryAddRequestBlueprint 
 {
 	for (auto& Entry : AddRequestBlueprint.Entries)
 	{
-		if (auto* FoundSlot = GetSlotForItemTag(AddRequestBlueprint.SlotCategoryTag, Entry.ItemTag))
+		if (auto* FoundSlot = GetSlotForItemTagAnyCategory(InventoryDeveloperSettings->DefaultInventoryCategoryTag, Entry.ItemTag))
 		{
 			if (auto* InventorySubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UCISInventorySubsystem>())
 			{
@@ -616,6 +622,28 @@ UCISInventorySlot* UCISBaseInventoryComponent::GetSlotForItemTag(FGameplayTag Sl
 			return Slot.Get();
 		}
 	}
+	return FallbackFreeSlot;
+}
+
+UCISInventorySlot* UCISBaseInventoryComponent::GetSlotForItemTagAnyCategory(FGameplayTag FallbackSlotCategory, FGameplayTag ItemTag)
+{
+	UCISInventorySlot* FallbackFreeSlot = nullptr;
+	for (auto& CategoryPair : InventorySlots)
+	{
+		for (auto& Slot : CategoryPair.Value.Slots)
+		{
+			// store first empty slot as fallback if correct category
+			if (CategoryPair.Key == FallbackSlotCategory && Slot->IsEmpty() && !IsValid(FallbackFreeSlot))
+			{
+				FallbackFreeSlot = Slot.Get();
+			}
+			else if (Slot->GetRepresentedItemTag() == ItemTag)
+			{
+				return Slot.Get();
+			}
+		}
+	}
+	
 	return FallbackFreeSlot;
 }
 

@@ -25,7 +25,7 @@ void UCCSAsyncAction_AsyncLoadItemDefinitionForFragmentType::Activate()
 {
 	Super::Activate();
 
-	if (!FragmentClass.IsValid() || !ItemDefinition.IsValid())
+	if (!FragmentClass.IsValid() || ItemDefinition.IsNull())
 	{
 		OnAsyncLoadItemDefinitionForFragmentTypeFinishedDelegate.Broadcast(
 			Request,

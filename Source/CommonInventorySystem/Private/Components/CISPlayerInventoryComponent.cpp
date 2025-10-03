@@ -35,24 +35,7 @@ UCISPlayerInventoryComponent::UCISPlayerInventoryComponent():
 	HotbarMaxIndex(-1),
 	CurrentSelectedSlotIndex(-1),
 	FreezeSelectedSlotCount(false)
-{
-	bWantsInitializeComponent = true;
-}
-
-void UCISPlayerInventoryComponent::InitializeComponent()
-{
-	Super::InitializeComponent();
-
-#if WITH_EDITOR
-	FU_UTILS_EDITOR_RETURN_NOTGAMEWORLD
-#endif
-	
-	if (InitialSelectedHotbarIndexSlot.IsSet())
-	{
-		UpdateSelectedHotbarSlot(CurrentSelectedSlotIndex + 2 + InitialSelectedHotbarIndexSlot.GetValue());
-		bInitialSelectedHotbarIndexSlotApplied = true;
-	}
-}
+{}
 
 	
 	/*----------------------------------------------------------------------------
@@ -76,6 +59,12 @@ void UCISPlayerInventoryComponent::OnInventoryItemDefinitionsLoaded(TSoftClassPt
 		{
 			auto& NewSlot = InventorySlots[HotbarInventoryTag].Slots.Emplace_GetRef(CreateSlot(HotbarInventoryTag, i));
 			OnInventorySlotAddedDelegate.Broadcast(HotbarInventoryTag, NewSlot.Get());
+		}
+
+		if (InitialSelectedHotbarIndexSlot.IsSet())
+		{
+			UpdateSelectedHotbarSlot(CurrentSelectedSlotIndex + 2 + InitialSelectedHotbarIndexSlot.GetValue());
+			bInitialSelectedHotbarIndexSlotApplied = true;
 		}
 	}
 }
@@ -149,6 +138,11 @@ void UCISPlayerInventoryComponent::UpdateSelectedHotbarSlot(int32 AdditiveIndex)
 	if (FreezeSelectedSlotCount > 0) { return; }
 	
 	const int32 OldHotbarIndex = CurrentSelectedSlotIndex;
+	if (auto* OldSelectedHotbarSlot = GetSlot(InventoryDeveloperSettings->HotbarInventoryCategoryTag, OldHotbarIndex))
+	{
+		OldSelectedHotbarSlot->OnSlotUpdatedDelegate.RemoveDynamic(this, &ThisClass::OnInventorySlotUpdatedCallback);
+	}
+	
 	CurrentSelectedSlotIndex += AdditiveIndex;
 	
 	if (CurrentSelectedSlotIndex > HotbarMaxIndex)
@@ -169,8 +163,20 @@ void UCISPlayerInventoryComponent::UpdateSelectedHotbarSlot(int32 AdditiveIndex)
 	{
 		CurrentHotbarSelection.Clear();
 		
-		if (!SelectedHotbarSlot->IsEmpty()
-			&& SelectedHotbarSlot->GetRepresentedItem()->HasTrait(InventoryDeveloperSettings->InventoryEquipableTrait))
+		if (!SelectedHotbarSlot->IsEmpty())
+		{
+			SpawnActorForCurrentHotbarSelection();
+		}
+
+		SelectedHotbarSlot->OnSlotUpdatedDelegate.AddUniqueDynamic(this, &ThisClass::OnInventorySlotUpdatedCallback);
+	}
+}
+
+void UCISPlayerInventoryComponent::SpawnActorForCurrentHotbarSelection()
+{
+	if (auto* SelectedHotbarSlot = GetSlot(InventoryDeveloperSettings->HotbarInventoryCategoryTag, CurrentSelectedSlotIndex))
+	{
+		if (SelectedHotbarSlot->GetRepresentedItem()->HasTrait(InventoryDeveloperSettings->InventoryEquipableTrait))
 		{
 			if (const auto* ActorItemFragment = SelectedHotbarSlot->GetRepresentedItem()->GetFragmentFromType<FCISActorInventoryItemFragment>())
 			{
@@ -184,5 +190,14 @@ void UCISPlayerInventoryComponent::UpdateSelectedHotbarSlot(int32 AdditiveIndex)
 				}
 			}
 		}
+	}
+}
+
+void UCISPlayerInventoryComponent::OnInventorySlotUpdatedCallback(UCISInventorySlot* Slot, const FCISInventorySlotUpdateInfo& UpdateInfo)
+{
+	// if it was empty , spawn
+	if (!CurrentHotbarSelection.IsActorSet() && UpdateInfo.Amount > 0)
+	{
+		SpawnActorForCurrentHotbarSelection();
 	}
 }

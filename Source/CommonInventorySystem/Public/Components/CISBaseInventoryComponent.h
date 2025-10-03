@@ -167,9 +167,6 @@ struct COMMONINVENTORYSYSTEM_API FCISInventoryAddRequestBlueprint
 	FCISInventoryAddRequestBlueprint();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FGameplayTag SlotCategoryTag;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FCISInventoryAddRequestBlueprintEntry> Entries;
 };
 
@@ -237,6 +234,8 @@ protected:
 	
 	virtual void OnInventoryItemDefinitionsLoaded(TSoftClassPtr<UCISInventorySlot> SoftInventorySlotClass, TArray<FCISInventorySlotDefinition> SlotDefinitions);
 
+	virtual void OnInitialSlotsDoneInitialization();
+	
 	virtual UCISInventorySlot* CreateSlot(FGameplayTag SlotCategory, int32 SlotIndex);
 	
 	virtual UCISInventorySlot* CreateSlotFromDefinition(FGameplayTag SlotCategory, int32 SlotIndex, const FCISInventorySlotDefinition& SlotDefinition);
@@ -280,6 +279,9 @@ public:
 	UCISInventorySlot* GetSlot(FGameplayTag SlotCategory, int32 SlotIndex);
 	
 	UCISInventorySlot* GetSlotForItemTag(FGameplayTag SlotCategory, FGameplayTag ItemTag);
+	
+	/** Check in all categories, if not found fallback to given category */
+	UCISInventorySlot* GetSlotForItemTagAnyCategory(FGameplayTag FallbackSlotCategory, FGameplayTag ItemTag);
 
 protected:
 	void AddItemsToCachedInfo(UCISInventorySlot* Slot, FGameplayTag ItemTag, int32 Amount);
