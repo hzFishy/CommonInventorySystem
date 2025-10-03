@@ -32,15 +32,74 @@ struct COMMONINVENTORYSYSTEM_API FCISInventorySlotCategory
 	TArray<TObjectPtr<UCISInventorySlot>> Slots;
 };
 
-/** Cached info per item in inventory */
-struct COMMONINVENTORYSYSTEM_API FCISInventoryItemInfo
+struct COMMONINVENTORYSYSTEM_API FCISInventorySlotIdentity
 {
-	FCISInventoryItemInfo();
-	FCISInventoryItemInfo(int32 InAmount);
+	FCISInventorySlotIdentity(UCISInventorySlot* Slot);
+	FCISInventorySlotIdentity(FGameplayTag InSlotTag, int32 InSlotIndex);
 
+	bool operator==(const FCISInventorySlotIdentity& Other) const;
+	
+	FGameplayTag SlotCategoryTag;
+	int32 SlotIndex;
+};
+
+struct COMMONINVENTORYSYSTEM_API FCISInventoryItemCacheInfoSlotDataEntry
+{
+	FCISInventoryItemCacheInfoSlotDataEntry(int32 InAmount);
+	
+	/** How much of this item we got in the inventory? */
 	int32 Amount;
 };
 
+/** Cache entry per slot cateogry */
+struct COMMONINVENTORYSYSTEM_API FCISInventoryItemCacheInfoSlotData
+{
+	FCISInventoryItemCacheInfoSlotData(int32 InSlotIndex, int32 InAmount);
+
+	void AddSlot(int32 SlotIndexIndex, const FCISInventoryItemCacheInfoSlotDataEntry& EntryData);
+	
+	void AddAmountToSlot(int32 SlotIndex, int32 Amount);
+	
+	void RemoveSlot(int32 SlotIndex);
+
+	const FCISInventoryItemCacheInfoSlotDataEntry& GetEntryData(int32 Index) const;
+	
+	int32 GetSlotCount() const { return Entries.Num(); }
+	
+	bool IsEmpty() const { return Entries.IsEmpty(); }
+
+	bool HasSlotIndex(int32 Index) const { return Entries.Contains(Index); }
+	
+	const TMap<int32, FCISInventoryItemCacheInfoSlotDataEntry>& GetEntries() const { return Entries; }
+	
+protected:
+	/** Key is the slot index in the parent category */
+	TMap<int32, FCISInventoryItemCacheInfoSlotDataEntry> Entries;
+};
+
+/** Cached info per item tag in inventory */
+struct COMMONINVENTORYSYSTEM_API FCISInventoryItemCacheInfo
+{
+	FCISInventoryItemCacheInfo(const FCISInventorySlotIdentity& InSlot, int32 InAmount);
+
+	
+	void AddAmountForSlot(const FCISInventorySlotIdentity& InSlot, int32 InAmount);
+	void RemoveAmountForSlot(const FCISInventorySlotIdentity& InSlot, int32 InAmount);
+	void RemoveSlot(const FCISInventorySlotIdentity& InSlot);
+
+	const TMap<FGameplayTag, FCISInventoryItemCacheInfoSlotData>& GetSlots();
+	const FCISInventoryItemCacheInfoSlotData& GetDataForSlotCategory(const FCISInventorySlotIdentity& InSlot) const;
+	const FCISInventoryItemCacheInfoSlotDataEntry& GetDataForSlotIndex(const FCISInventorySlotIdentity& InSlot) const;
+	
+protected:
+	/** Data per category where this item is used */
+	TMap<FGameplayTag, FCISInventoryItemCacheInfoSlotData> Slots;
+};
+
+	
+	/*----------------------------------------------------------------------------
+		Remove Request
+	----------------------------------------------------------------------------*/
 struct COMMONINVENTORYSYSTEM_API FCISInventoryRemoveRequestItem
 {
 	FCISInventoryRemoveRequestItem();
@@ -59,6 +118,10 @@ struct COMMONINVENTORYSYSTEM_API FCISInventoryRemoveRequest
 	const FCTItemProviderItemSearchQueryResult* ItemSearchQueryResult;
 };
 
+	
+	/*----------------------------------------------------------------------------
+		Add Request
+	----------------------------------------------------------------------------*/
 struct COMMONINVENTORYSYSTEM_API FCISInventoryAddRequestItem
 {
 	FCISInventoryAddRequestItem();
@@ -75,6 +138,39 @@ struct COMMONINVENTORYSYSTEM_API FCISInventoryAddRequest
 
 	TArray<FCISInventoryAddRequestItem> Items;
 	FGameplayTag SlotCateogryTag;
+};
+
+
+USTRUCT(BlueprintType, DisplayName="Inventory Add Request Blueprint Entry")
+struct COMMONINVENTORYSYSTEM_API FCISInventoryAddRequestBlueprintEntry
+{
+	GENERATED_BODY()
+	
+	FCISInventoryAddRequestBlueprintEntry();
+
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FGameplayTag ItemTag;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSoftObjectPtr<UCISInventoryItemDefinition> SoftItemDefinition;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Amount;
+};
+
+USTRUCT(BlueprintType, DisplayName="Inventory Add Request Blueprint")
+struct COMMONINVENTORYSYSTEM_API FCISInventoryAddRequestBlueprint
+{
+	GENERATED_BODY()
+	
+	FCISInventoryAddRequestBlueprint();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FGameplayTag SlotCategoryTag;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FCISInventoryAddRequestBlueprintEntry> Entries;
 };
 
 
@@ -108,7 +204,7 @@ protected:
 	
 	UPROPERTY()
 	TMap<FGameplayTag, FCISInventorySlotCategory> InventorySlots;
-	TMap<FGameplayTag, FCISInventoryItemInfo> CachedInventoryItemInfo;
+	TMap<FGameplayTag, FCISInventoryItemCacheInfo> CachedInventoryItemInfo;
 	
 	
 	/*----------------------------------------------------------------------------
@@ -170,8 +266,12 @@ public:
 
 	void RequestRemove(const FCISInventoryRemoveRequest& RemoveRequest);
 
+	/** Add requested items to available slots */
+	UFUNCTION(BlueprintCallable, Category="CommonInventorySystem", DisplayName="Request Add")
+	void K2_RequestAdd(FCISInventoryAddRequestBlueprint AddRequestBlueprint);
+	
 	void RequestAdd(const FCISInventoryAddRequest& AddRequest);
-
+	
 	
 	/*----------------------------------------------------------------------------
 		Utilities
@@ -182,7 +282,11 @@ public:
 	UCISInventorySlot* GetSlotForItemTag(FGameplayTag SlotCategory, FGameplayTag ItemTag);
 
 protected:
-	void AddItemsToCachedInfo(FGameplayTag ItemTag, int32 Amount);
+	void AddItemsToCachedInfo(UCISInventorySlot* Slot, FGameplayTag ItemTag, int32 Amount);
+	
+	void RemoveItemsToCachedInfo(UCISInventorySlot* Slot, FGameplayTag ItemTag, int32 Amount);
+
+	void RemoveAllItemsToCachedInfo(UCISInventorySlot* Slot);
 	
 	
 	/*----------------------------------------------------------------------------
@@ -190,4 +294,6 @@ protected:
 	----------------------------------------------------------------------------*/
 public:
 	void DumpAllSlots();
+
+	void DumpCacheInfo();
 };

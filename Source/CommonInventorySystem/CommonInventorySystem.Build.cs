@@ -10,7 +10,7 @@ public class CommonInventorySystem : ModuleRules
 		
 		PublicDependencyModuleNames.AddRange( new string[]
 		{
-			"Core",
+			"Core", "Engine",
 			"DeveloperSettings",
 			"GameplayTags",
 			"FishyUtils", "CommonTypes"
@@ -19,7 +19,7 @@ public class CommonInventorySystem : ModuleRules
 		
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			"CoreUObject", "Engine",
+			"CoreUObject",
 			"Slate", "SlateCore"
 		});
 	}

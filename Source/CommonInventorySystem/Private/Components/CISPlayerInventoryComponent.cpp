@@ -17,8 +17,12 @@
 namespace CIS::Core::Debug
 {
 	FU_CMD_OBJECT_ALLRUNFUNC(DumpAllSlotsForPlayer,
-		"CIS.Inventory.DumpAllSlotsForPlayer", "Dump info for all slots for unique player inventory components",
+		"CIS.Inventory.DumpAllSlotsForPlayer", "Dump info for all slots for unique player inventory component",
 		UCISPlayerInventoryComponent, DumpAllSlots);
+
+	FU_CMD_OBJECT_ALLRUNFUNC(DumpCacheInfoForPlayer,
+		"CIS.Inventory.DumpCacheInfoForPlayer", "Dump cache info for unique player inventory component",
+		UCISPlayerInventoryComponent, DumpCacheInfo);
 }
 #endif
 

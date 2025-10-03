@@ -31,7 +31,7 @@ public:
 	
 	virtual void Activate() override;
 
-	UPROPERTY(BlueprintAssignable, Category="CommonCraftingSystem", DisplayName="Finished")
+	UPROPERTY(BlueprintAssignable, Category="CommonInventorySystem", DisplayName="Finished")
 	FCCSOnAsyncLoadItemDefinitionsFromItemTagsFinishedOutputPin OnAsyncLoadItemDefinitionsFromItemTagsFinishedDelegate;
 
 	FCISAsyncInventoryItemDefinitionRequest Request;

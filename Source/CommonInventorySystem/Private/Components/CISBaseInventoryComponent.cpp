@@ -19,6 +19,10 @@ namespace CIS::Core::Debug
 	FU_CMD_OBJECT_ALLRUNFUNC(DumpAllSlotsForAll,
 		"CIS.Inventory.DumpAllSlotsForAll", "Dump info for all slots for all base inventory components",
 		UCISBaseInventoryComponent, DumpAllSlots);
+
+	FU_CMD_OBJECT_ALLRUNFUNC(DumpCacheInfoForAll,
+		"CIS.Inventory.DumpCacheInfoForAll", "Dump cache info for all base inventory components",
+		UCISBaseInventoryComponent, DumpCacheInfo);
 }
 #endif
 
@@ -31,13 +35,129 @@ FCISInventorySlotCategory::FCISInventorySlotCategory(int32 Size)
 }
 
 
-FCISInventoryItemInfo::FCISInventoryItemInfo():
-	Amount(0)
+FCISInventorySlotIdentity::FCISInventorySlotIdentity(UCISInventorySlot* Slot):
+	SlotCategoryTag(Slot->GetRepresentedCategoryTag()),
+	SlotIndex(Slot->GetSlotIndex())
+{
+}
+
+FCISInventorySlotIdentity::FCISInventorySlotIdentity(FGameplayTag InSlotTag, int32 InSlotIndex):
+	SlotCategoryTag(InSlotTag),
+	SlotIndex(InSlotIndex)
 {}
 
-FCISInventoryItemInfo::FCISInventoryItemInfo(int32 InAmount): Amount(InAmount)
+bool FCISInventorySlotIdentity::operator==(const FCISInventorySlotIdentity& Other) const
+{
+	return SlotCategoryTag == Other.SlotCategoryTag && SlotIndex == Other.SlotIndex;
+}
+
+
+FCISInventoryItemCacheInfoSlotDataEntry::FCISInventoryItemCacheInfoSlotDataEntry(int32 InAmount):
+	Amount(InAmount)
 {}
 
+FCISInventoryItemCacheInfoSlotData::FCISInventoryItemCacheInfoSlotData(int32 InSlotIndex, int32 InAmount)
+{
+	AddSlot(InSlotIndex, FCISInventoryItemCacheInfoSlotDataEntry(InAmount));
+}
+
+void FCISInventoryItemCacheInfoSlotData::AddSlot(int32 SlotIndexIndex, const FCISInventoryItemCacheInfoSlotDataEntry& EntryData)
+{
+	Entries.Emplace(SlotIndexIndex, EntryData);
+}
+
+void FCISInventoryItemCacheInfoSlotData::AddAmountToSlot(int32 SlotIndex, int32 Amount)
+{
+	auto* Entry = Entries.Find(SlotIndex);
+	if (FU_ENSURE(Entry))
+	{
+		Entry->Amount += Amount;
+	}
+}
+
+void FCISInventoryItemCacheInfoSlotData::RemoveSlot(int32 SlotIndex)
+{
+	Entries.Remove(SlotIndex);
+}
+
+const FCISInventoryItemCacheInfoSlotDataEntry& FCISInventoryItemCacheInfoSlotData::GetEntryData(int32 Index) const
+{
+	return Entries[Index];
+}
+
+FCISInventoryItemCacheInfo::FCISInventoryItemCacheInfo(const FCISInventorySlotIdentity& InSlot, int32 InAmount)
+{
+	AddAmountForSlot(InSlot, InAmount);
+}
+
+void FCISInventoryItemCacheInfo::AddAmountForSlot(const FCISInventorySlotIdentity& InSlot, int32 InAmount)
+{
+	if (auto* SlotCategoryData = Slots.Find(InSlot.SlotCategoryTag))
+	{
+		// look for slot entry
+		if (SlotCategoryData->HasSlotIndex(InSlot.SlotIndex))
+		{
+			// update entry
+			SlotCategoryData->AddAmountToSlot(InSlot.SlotIndex, InAmount);
+		}
+		else
+		{
+			// add new slot index in category
+			SlotCategoryData->AddSlot(InSlot.SlotIndex, FCISInventoryItemCacheInfoSlotDataEntry(InAmount));
+		}
+	}
+	else
+	{
+		// add new category entry
+		Slots.Emplace(InSlot.SlotCategoryTag, FCISInventoryItemCacheInfoSlotData(InSlot.SlotIndex, InAmount));
+	}
+}
+
+void FCISInventoryItemCacheInfo::RemoveAmountForSlot(const FCISInventorySlotIdentity& InSlot, int32 InAmount)
+{
+	auto* SlotCategoryData = Slots.Find(InSlot.SlotCategoryTag);
+	if (FU_ENSURE(SlotCategoryData))
+	{
+		SlotCategoryData->AddAmountToSlot(InSlot.SlotIndex, -InAmount);
+	}
+}
+
+void FCISInventoryItemCacheInfo::RemoveSlot(const FCISInventorySlotIdentity& InSlot)
+{
+	// first remove index slot
+	auto* SlotCategoryData = Slots.Find(InSlot.SlotCategoryTag);
+	if (FU_ENSURE(SlotCategoryData))
+	{
+		SlotCategoryData->RemoveSlot(InSlot.SlotIndex);
+
+		// if we dont have anything left, remove the category
+		if (SlotCategoryData->IsEmpty())
+		{
+			Slots.Remove(InSlot.SlotCategoryTag);
+		}
+	}
+}
+
+const TMap<FGameplayTag, FCISInventoryItemCacheInfoSlotData>& FCISInventoryItemCacheInfo::GetSlots()
+{
+	return Slots;
+}
+
+
+const FCISInventoryItemCacheInfoSlotData& FCISInventoryItemCacheInfo::GetDataForSlotCategory(const FCISInventorySlotIdentity& InSlot) const
+{
+	return Slots[InSlot.SlotCategoryTag];
+}
+
+const FCISInventoryItemCacheInfoSlotDataEntry& FCISInventoryItemCacheInfo::GetDataForSlotIndex(const FCISInventorySlotIdentity& InSlot) const
+{
+	return Slots[InSlot.SlotCategoryTag].GetEntryData(InSlot.SlotIndex);
+}
+
+	
+	/*----------------------------------------------------------------------------
+		Remove Request
+	----------------------------------------------------------------------------*/
 FCISInventoryRemoveRequestItem::FCISInventoryRemoveRequestItem():
 	Amount(0)
 {}
@@ -62,6 +182,10 @@ FCISInventoryRemoveRequest::FCISInventoryRemoveRequest(const FCTItemProviderCraf
 	ItemSearchQueryResult = &InItemSearchQueryResult;
 }
 
+	
+	/*----------------------------------------------------------------------------
+		Add Request
+	----------------------------------------------------------------------------*/
 FCISInventoryAddRequestItem::FCISInventoryAddRequestItem():
 	Amount(0)
 {}
@@ -77,6 +201,12 @@ FCISInventoryAddRequest::FCISInventoryAddRequest(const FCTItemProviderCraftQuery
 	Items.Emplace(FCISInventoryAddRequestItem(CraftQuery.OutputData.ItemTag, CraftQuery.OutputData.Amount));
 	SlotCateogryTag = InSlotCateogryTag;
 }
+
+FCISInventoryAddRequestBlueprintEntry::FCISInventoryAddRequestBlueprintEntry():
+	Amount(1)
+{}
+
+FCISInventoryAddRequestBlueprint::FCISInventoryAddRequestBlueprint() {}
 
 
 DEFINE_LOG_CATEGORY(LogCISInventory);
@@ -106,8 +236,8 @@ void UCISBaseInventoryComponent::OnRegister()
 
 bool UCISBaseInventoryComponent::SearchItems(const FCTItemProviderItemSearchQuery& Query, FCTItemProviderItemSearchQueryResult& QueryResult)
 {
-	TMap<FGameplayTag, const FCTItemProviderItemSearchQueryItem> QuickSearchMap;
-	Query.BuildQuickSearchMap(QuickSearchMap);
+	//TMap<FGameplayTag, const FCTItemProviderItemSearchQueryItem> QuickSearchMap;
+	//Query.BuildQuickSearchMap(QuickSearchMap);
 
 	// results per item
 	QueryResult.Results.Reserve(Query.Items.Num());
@@ -115,8 +245,37 @@ bool UCISBaseInventoryComponent::SearchItems(const FCTItemProviderItemSearchQuer
 	{
 		QueryResult.Results.Emplace(QueryEntryItem.ItemTag, FCTItemProviderItemSearchQueryResultItem());
 	}
+
+	// for faster search we get item data from cached data instead of iterating all slots
+	for (auto& QueryEntry : Query.Items)
+	{
+		// try to get cache info for item tag
+		if (auto* FoundCacheEntry = CachedInventoryItemInfo.Find(QueryEntry.ItemTag))
+		{
+			// get back result entry
+			auto* QuickResultEntry = QueryResult.Results.Find(QueryEntry.ItemTag);
+			if (FU_ENSURE(QuickResultEntry))
+			{
+				// now we get all slots
+				// iterate categories, then slot indexes
+				for (const auto& PairCacheData_Category : FoundCacheEntry->GetSlots())
+				{
+					auto SlotCategoryTag = PairCacheData_Category.Key;
+					for (const auto& PairCacheData_Slot : PairCacheData_Category.Value.GetEntries())
+					{
+						FCTItemProviderItemSearchQueryResultItemSlot ResultSlot;
+						ResultSlot.SlotCategoryTag = SlotCategoryTag;
+						ResultSlot.SlotIndex = PairCacheData_Slot.Key;
+						ResultSlot.FoundItemAmount = PairCacheData_Slot.Value.Amount;
+
+						QuickResultEntry->FoundSlots.Emplace(ResultSlot);
+					}
+				}
+			}
+		}
+	}
 	
-	for (auto& SlotCategory : InventorySlots)
+	/*for (auto& SlotCategory : InventorySlots)
 	{
 		for (auto& Slot : SlotCategory.Value.Slots)
 		{
@@ -138,7 +297,7 @@ bool UCISBaseInventoryComponent::SearchItems(const FCTItemProviderItemSearchQuer
 				}
 			}
 		}
-	}
+	}*/
 
 	return QueryResult.FoundAllItems(Query.BuildAmountMap());
 }
@@ -268,7 +427,7 @@ void UCISBaseInventoryComponent::DeferredCreateItemsFromDefinition(UCISInventory
 				Slot->AddItem(NewItem, false);
 			}
 
-			AddItemsToCachedInfo(Slot->GetRepresentedItemTag(), ItemCount);
+			AddItemsToCachedInfo(Slot, Slot->GetRepresentedItemTag(), ItemCount);
 			Slot->CallUpdate();
 		}),
 		FStreamableManager::AsyncLoadHighPriority
@@ -279,7 +438,9 @@ void UCISBaseInventoryComponent::DeferredCreateItemsFromTag(UCISInventorySlot* S
 {
 	if (auto* InventorySubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UCISInventorySubsystem>())
 	{
-		InventorySubsystem->AsyncLoadItemDefinitionsFromItemTags(FGameplayTagContainer(ItemTag), [this, ItemCount, Slot](const TArray<UCISInventoryItemDefinition*>& LoadedItemDefinitions)
+		InventorySubsystem->AsyncLoadItemDefinitionsFromItemTags(
+			FGameplayTagContainer(ItemTag),
+			[this, ItemCount, Slot] (const TArray<UCISInventoryItemDefinition*>& LoadedItemDefinitions)
 		{
 			DeferredCreateItemsFromDefinition(Slot, ItemCount, LoadedItemDefinitions[0]);
 		});
@@ -304,32 +465,49 @@ void UCISBaseInventoryComponent::RequestMove(FGameplayTag SourceSlotCategory, in
 	if (TargetSlot->IsEmpty())
 	{
 		// move objects from source to target
+		auto MovingItemTag = SourceSlot->GetRepresentedItemTag();
 		auto SourceItems = SourceSlot->GetItemsCopy();
+
+		RemoveAllItemsToCachedInfo(SourceSlot);
 		SourceSlot->ClearAllItems(true);
+		
 		TargetSlot->AddItems(SourceItems, true);
+		AddItemsToCachedInfo(TargetSlot, MovingItemTag, SourceItems.Num());
 	}
 	// case 2: swapping
 	else if (SourceSlot->GetRepresentedItemTag() != TargetSlot->GetRepresentedItemTag())
 	{
 		// get copy of items
+		auto SourceMovingItemTag = SourceSlot->GetRepresentedItemTag();
+		auto TargetMovingItemTag = TargetSlot->GetRepresentedItemTag();
 		auto SourceItems = SourceSlot->GetItemsCopy();
 		auto TargetItems = TargetSlot->GetItemsCopy();
 
 		// clear slots
+		// TODO (perf): cache update could be improved by adding then subtracting instead of doing a complete clear
+		RemoveAllItemsToCachedInfo(SourceSlot);
 		SourceSlot->ClearAllItems(false);
+		RemoveAllItemsToCachedInfo(TargetSlot);
 		TargetSlot->ClearAllItems(false);
 		
-		// move objects
+		// add back objects to correct slot
 		SourceSlot->AddItems(TargetItems, true);
+		AddItemsToCachedInfo(SourceSlot, TargetMovingItemTag, TargetItems.Num());
 		TargetSlot->AddItems(SourceItems, true);
+		AddItemsToCachedInfo(TargetSlot, SourceMovingItemTag, SourceItems.Num());
 	}
 	// case3: stack
 	else
 	{
 		// get source objects
 		auto SourceItems = SourceSlot->GetItemsCopy();
-		TargetSlot->AddItems(SourceItems, true);
+		auto MovingItemTag = SourceSlot->GetRepresentedItemTag();
+		
+		RemoveAllItemsToCachedInfo(SourceSlot);
 		SourceSlot->ClearAllItems(true);
+		
+		TargetSlot->AddItems(SourceItems, true);
+		AddItemsToCachedInfo(TargetSlot, MovingItemTag, SourceItems.Num());
 	}
 }
 
@@ -352,10 +530,42 @@ void UCISBaseInventoryComponent::RequestRemove(const FCISInventoryRemoveRequest&
 			if (FU_ENSURE(Slot))
 			{
 				// remove the maximum we can
-				int32 LeftAmountToRemove = Slot->RemoveAmount(AmountToRemove, true);
-				AmountToRemove -= LeftAmountToRemove;
+				int32 RemovedAmount = Slot->RemoveAmount(AmountToRemove, true);
+				RemoveItemsToCachedInfo(Slot, ItemToRemove.Tag, RemovedAmount);
+				AmountToRemove -= RemovedAmount;
 
 				if (AmountToRemove <= 0) { break; }
+			}
+		}
+	}
+}
+
+void UCISBaseInventoryComponent::K2_RequestAdd(FCISInventoryAddRequestBlueprint AddRequestBlueprint)
+{
+	for (auto& Entry : AddRequestBlueprint.Entries)
+	{
+		if (auto* FoundSlot = GetSlotForItemTag(AddRequestBlueprint.SlotCategoryTag, Entry.ItemTag))
+		{
+			if (auto* InventorySubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UCISInventorySubsystem>())
+			{
+				// TODO (perf): instead of doing an async request per item it would be better to do a batch
+				if (auto* AM = UAssetManager::GetIfInitialized())
+				{
+					AM->GetStreamableManager().RequestAsyncLoad(
+						Entry.SoftItemDefinition.ToSoftObjectPath(),
+						FStreamableDelegate::CreateWeakLambda(this, [this, FoundSlot, Entry]()
+						{
+							auto* LoadedDefinition = Entry.SoftItemDefinition.Get();
+							if (!FU_ENSURE_MSG(LoadedDefinition->Tag == Entry.ItemTag,
+								"AddRequestBlueprint: item tag and item definition are different"))
+							{
+								return;
+							}
+							
+							DeferredCreateItemsFromDefinition(FoundSlot, Entry.Amount, LoadedDefinition);
+						})
+					);
+				}
 			}
 		}
 	}
@@ -409,24 +619,46 @@ UCISInventorySlot* UCISBaseInventoryComponent::GetSlotForItemTag(FGameplayTag Sl
 	return FallbackFreeSlot;
 }
 
-void UCISBaseInventoryComponent::AddItemsToCachedInfo(FGameplayTag ItemTag, int32 Amount)
+void UCISBaseInventoryComponent::AddItemsToCachedInfo(UCISInventorySlot* Slot, FGameplayTag ItemTag, int32 Amount)
 {
 	if (auto* Entry = CachedInventoryItemInfo.Find(ItemTag))
 	{
-		Entry->Amount += Amount;
+		auto SlotId = FCISInventorySlotIdentity(Slot);
+		Entry->AddAmountForSlot(SlotId, Amount);
 	}
 	else
 	{
-		CachedInventoryItemInfo.Add(ItemTag, FCISInventoryItemInfo(Amount));
+		CachedInventoryItemInfo.Emplace(ItemTag, FCISInventoryItemCacheInfo(FCISInventorySlotIdentity(Slot), Amount));
 	}
 }
 
+void UCISBaseInventoryComponent::RemoveItemsToCachedInfo(UCISInventorySlot* Slot, FGameplayTag ItemTag, int32 Amount)
+{
+	auto* Entry = CachedInventoryItemInfo.Find(ItemTag);
+	if (FU_ENSURE(Entry))
+	{
+		auto SlotId = FCISInventorySlotIdentity(Slot);
+		Entry->RemoveAmountForSlot(SlotId, Amount);
 
-/*----------------------------------------------------------------------------
+		if (Entry->GetDataForSlotIndex(SlotId).Amount <= 0)
+		{
+			Entry->RemoveSlot(SlotId);
+		}
+	}
+}
+
+void UCISBaseInventoryComponent::RemoveAllItemsToCachedInfo(UCISInventorySlot* Slot)
+{
+	RemoveItemsToCachedInfo(Slot, Slot->GetRepresentedItemTag(), INT32_MAX);
+}
+
+	
+	/*----------------------------------------------------------------------------
 		Debug
 	----------------------------------------------------------------------------*/
 void UCISBaseInventoryComponent::DumpAllSlots()
 {
+	CIS_LOG_INV_W("DumpAllSlots --- START");
 	for (auto& Pair : InventorySlots)
 	{
 		auto& Category = Pair.Key;
@@ -452,4 +684,31 @@ void UCISBaseInventoryComponent::DumpAllSlots()
 			}
 		}
 	}
+	CIS_LOG_INV_W("DumpAllSlots --- END");
+}
+
+void UCISBaseInventoryComponent::DumpCacheInfo()
+{
+	CIS_LOG_INV_W("DumpCacheInfo --- START");
+	for (auto& CachePair : CachedInventoryItemInfo)
+	{
+		auto& ItemTag = CachePair.Key;
+		auto& CacheInfo = CachePair.Value;
+
+		CIS_LOG_INV_W("Item: {0}", ItemTag.ToString());
+		for (auto& CacheInfoSlotPair : CacheInfo.GetSlots())
+		{
+			auto& SlotCategoryTag = CacheInfoSlotPair.Key;
+			auto& SlotCategoryInfo = CacheInfoSlotPair.Value;
+
+			// iterate each category
+			CIS_LOG_INV_W("		Slot [{0}]", SlotCategoryTag.ToString())
+			for (auto& Slots : SlotCategoryInfo.GetEntries())
+			{
+				CIS_LOG_INV_W("			Index [{0}]:", Slots.Key);
+				CIS_LOG_INV_W("				Amount: {0}", Slots.Value.Amount);
+			}
+		}
+	}
+	CIS_LOG_INV_W("DumpCacheInfo --- END");
 }
