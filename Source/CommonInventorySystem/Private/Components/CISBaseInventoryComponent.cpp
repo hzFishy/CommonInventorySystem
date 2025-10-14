@@ -16,11 +16,11 @@
 #if FU_WITH_CONSOLE
 namespace CIS::Core::Debug
 {
-	FU_CMD_OBJECT_ALLRUNFUNC(DumpAllSlotsForAll,
+	FU_CMD_RUNFUNC_OBJECT_ALL(DumpAllSlotsForAll,
 		"CIS.Inventory.DumpAllSlotsForAll", "Dump info for all slots for all base inventory components",
 		UCISBaseInventoryComponent, DumpAllSlots);
 
-	FU_CMD_OBJECT_ALLRUNFUNC(DumpCacheInfoForAll,
+	FU_CMD_RUNFUNC_OBJECT_ALL(DumpCacheInfoForAll,
 		"CIS.Inventory.DumpCacheInfoForAll", "Dump cache info for all base inventory components",
 		UCISBaseInventoryComponent, DumpCacheInfo);
 }
