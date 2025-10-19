@@ -20,6 +20,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCISOnInventorySlotAddedSignature,
 	UCISInventorySlot*, NewSlot
 );
 
+	
+	/*----------------------------------------------------------------------------
+		Slot
+	----------------------------------------------------------------------------*/
 USTRUCT(BlueprintType)
 struct COMMONINVENTORYSYSTEM_API FCISInventorySlotCategory
 {
@@ -43,6 +47,10 @@ struct COMMONINVENTORYSYSTEM_API FCISInventorySlotIdentity
 	int32 SlotIndex;
 };
 
+	
+	/*----------------------------------------------------------------------------
+		Cache Info
+	----------------------------------------------------------------------------*/
 struct COMMONINVENTORYSYSTEM_API FCISInventoryItemCacheInfoSlotDataEntry
 {
 	FCISInventoryItemCacheInfoSlotDataEntry(int32 InAmount);
@@ -94,6 +102,26 @@ struct COMMONINVENTORYSYSTEM_API FCISInventoryItemCacheInfo
 protected:
 	/** Data per category where this item is used */
 	TMap<FGameplayTag, FCISInventoryItemCacheInfoSlotData> Slots;
+};
+
+
+	/*----------------------------------------------------------------------------
+		Load Request
+	----------------------------------------------------------------------------*/
+struct COMMONINVENTORYSYSTEM_API FCISInventoryItemDefinitionsLoadRequestSlotCategory
+{
+	FCISInventoryItemDefinitionsLoadRequestSlotCategory();
+
+	FGameplayTag CategoryTag;
+	
+	FCISInventoryCategoryDefinition CategoryDefinition;
+};
+
+struct COMMONINVENTORYSYSTEM_API FCISInventoryItemDefinitionsLoadRequest
+{
+	FCISInventoryItemDefinitionsLoadRequest();
+
+	TMap<FGameplayTag, FCISInventoryItemDefinitionsLoadRequestSlotCategory> Categories;
 };
 
 	
@@ -195,7 +223,7 @@ protected:
 
 	TWeakObjectPtr<const UCISInventoryDeveloperSettings> InventoryDeveloperSettings;
 
-	TSubclassOf<UCISInventorySlot> InventorySlotClass;
+	TMap<FGameplayTag, TSubclassOf<UCISInventorySlot>> InventorySlotClassPerCategory;
 
 	bool bSlotsCreated;
 	
@@ -232,7 +260,7 @@ public:
 protected:
 	virtual void OnInventoryPresetDefinitionLoaded();
 	
-	virtual void OnInventoryItemDefinitionsLoaded(TSoftClassPtr<UCISInventorySlot> SoftInventorySlotClass, TArray<FCISInventorySlotDefinition> SlotDefinitions);
+	virtual void OnInventoryItemDefinitionsLoaded(FCISInventoryItemDefinitionsLoadRequest LoadRequest);
 
 	virtual void OnInitialSlotsDoneInitialization();
 	

@@ -2,26 +2,39 @@
 
 
 #include "Data/Definitions/CISInventoryPresetDefinition.h"
-#include "Core/CISInventorySlot.h"
 
 
-UCISInventoryPresetDefinition::UCISInventoryPresetDefinition():
-	SlotClass(UCISInventorySlot::StaticClass())
-{}
+UCISInventoryPresetDefinition::UCISInventoryPresetDefinition() {}
 
-TSoftClassPtr<UCISInventorySlot> UCISInventoryPresetDefinition::GetInventorySlotClass() const
+void UCISInventoryPresetDefinition::GetInventorySlotCategories(TArray<FGameplayTag>& Categories) const
 {
-	return SlotClass;
+	SlotDefinitions.GetKeys(Categories);
 }
 
-void UCISInventoryPresetDefinition::GetInventorySlotDefinitions(TArray<FCISInventorySlotDefinition>& OutSlotDefinitions) const
+void UCISInventoryPresetDefinition::GetInventorySlotCategoryDefinition(FGameplayTag Category, FCISInventoryCategoryDefinition& OutDefinition) const
 {
-	OutSlotDefinitions.Append(SlotDefinitions);
+	OutDefinition = SlotDefinitions[Category];
 }
 
-void UCISInventoryPresetDefinition::GetSoftInventoryItems(TArray<TSoftObjectPtr<UCISInventoryItemDefinition>>& ItemDefinitions) const
+TSoftClassPtr<UCISInventorySlot> UCISInventoryPresetDefinition::GetInventorySlotClass(FGameplayTag Category) const
 {
-	for (auto& SlotDef : SlotDefinitions)
+	if (!SlotDefinitions.Contains(Category)) { return nullptr; }
+	
+	return SlotDefinitions[Category].SlotClass;
+}
+
+void UCISInventoryPresetDefinition::GetInventorySlotDefinitions(FGameplayTag Category, TArray<FCISInventorySlotDefinition>& OutSlotDefinitions) const
+{
+	if (!SlotDefinitions.Contains(Category)) { return; }
+	
+	OutSlotDefinitions.Append(SlotDefinitions[Category].SlotDefinitions);
+}
+
+void UCISInventoryPresetDefinition::GetSoftInventoryItems(FGameplayTag Category, TArray<TSoftObjectPtr<UCISInventoryItemDefinition>>& ItemDefinitions) const
+{
+	if (!SlotDefinitions.Contains(Category)) { return; }
+	
+	for (auto& SlotDef : SlotDefinitions[Category].SlotDefinitions)
 	{
 		ItemDefinitions.Emplace(SlotDef.SoftItemDefinition);
 	}

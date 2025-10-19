@@ -2,24 +2,42 @@
 
 
 #include "Interfaces/CISInventoryDefinitionInterface.h"
+#include "Core/CISInventorySlot.h"
 
 
 FCISInventorySlotDefinition::FCISInventorySlotDefinition():
 	Count(1)
 {}
 
-TSoftClassPtr<UCISInventorySlot> ICISInventoryDefinitionInterface::GetInventorySlotClass() const
+FCISInventoryCategoryDefinition::FCISInventoryCategoryDefinition():
+	SlotClass(UCISInventorySlot::StaticClass())
+{}
+
+
+void ICISInventoryDefinitionInterface::GetInventorySlotCategories(TArray<FGameplayTag>& Categories) const
+{
+	
+}
+
+void ICISInventoryDefinitionInterface::GetInventorySlotCategoryDefinition(
+	FGameplayTag Category, FCISInventoryCategoryDefinition& OutDefinition) const
+{
+	unimplemented();
+	return;
+}
+
+TSoftClassPtr<UCISInventorySlot> ICISInventoryDefinitionInterface::GetInventorySlotClass(FGameplayTag Category) const
 {
 	unimplemented();
 	return nullptr;
 }
 
-void ICISInventoryDefinitionInterface::GetInventorySlotDefinitions(TArray<FCISInventorySlotDefinition>& SlotDefinitions) const
+void ICISInventoryDefinitionInterface::GetInventorySlotDefinitions(FGameplayTag Category, TArray<FCISInventorySlotDefinition>& SlotDefinitions) const
 {
 	unimplemented();
 }
 
-void ICISInventoryDefinitionInterface::GetSoftInventoryItems(TArray<TSoftObjectPtr<UCISInventoryItemDefinition>>& ItemDefinitions) const
+void ICISInventoryDefinitionInterface::GetSoftInventoryItems(FGameplayTag Category, TArray<TSoftObjectPtr<UCISInventoryItemDefinition>>& ItemDefinitions) const
 {
 	unimplemented();
 }

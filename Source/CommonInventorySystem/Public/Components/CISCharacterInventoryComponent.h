@@ -6,17 +6,23 @@
 #include "CISBaseInventoryComponent.h"
 #include "Core/CISInventorySlot.h"
 #include "Data/CISInventoryTypes.h"
-#include "CISPlayerInventoryComponent.generated.h"
+#include "Data/Fragments/CISAttachInventoryItemFragment.h"
+#include "CISCharacterInventoryComponent.generated.h"
 
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCISOnPlayerInventorySelectedHotbarSlotChangedSignature,
-	UCISPlayerInventoryComponent*, PlayerInventoryComponent,
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCISOnCharacterInventorySelectedHotbarSlotChangedSignature,
+	UCISCharacterInventoryComponent*, CharacterInventoryComponent,
 	const FCISHotbarChangedEvent&, HotbarChangedEvent
 );
 
 
-UCLASS(ClassGroup=(CommonInventorySystem), DisplayName="Player Inventory Component", meta=(BlueprintSpawnableComponent))
-class COMMONINVENTORYSYSTEM_API UCISPlayerInventoryComponent : public UCISBaseInventoryComponent
+/**
+ * Inventory Component for characters (AIs, Player, ...).
+ * 
+ * The main extra feature it has is hotbar slots and management.
+ */
+UCLASS(ClassGroup=(CommonInventorySystem), DisplayName="Character Inventory Component", meta=(BlueprintSpawnableComponent))
+class COMMONINVENTORYSYSTEM_API UCISCharacterInventoryComponent : public UCISBaseInventoryComponent
 {
 	GENERATED_BODY()
 
@@ -26,20 +32,20 @@ class COMMONINVENTORYSYSTEM_API UCISPlayerInventoryComponent : public UCISBaseIn
 	----------------------------------------------------------------------------*/
 public:
 	UPROPERTY(BlueprintAssignable, DisplayName="On Selected Hotbar Slot Changed")
-	FCISOnPlayerInventorySelectedHotbarSlotChangedSignature OnSelectedHotbarSlotChangedDelegate;
+	FCISOnCharacterInventorySelectedHotbarSlotChangedSignature OnSelectedHotbarSlotChangedDelegate;
 	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="CommonInventorySystem")
 	TOptional<int32> InitialSelectedHotbarIndexSlot;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="CommonInventorySystem")
-	FName HotbarEquipSocket;
 	
+	/** The component actor items will attach to, usually a Skeletal Mesh Component */
 	TWeakObjectPtr<UPrimitiveComponent> HotbarEquipComponent;
 	bool bInitialSelectedHotbarIndexSlotApplied;
-	int32 HotbarMaxIndex;
+	int32 CachedHotbarMaxIndex;
 	int32 CurrentSelectedSlotIndex;
 	int32 FreezeSelectedSlotCount;
+	/** Data stored regarding the selected hotbar */
 	FCISInventoryHotbarSelection CurrentHotbarSelection;
 	
 	
@@ -47,21 +53,22 @@ protected:
 		Defaults
 	----------------------------------------------------------------------------*/
 public:
-	UCISPlayerInventoryComponent();
+	UCISCharacterInventoryComponent();
 
 	
 	/*----------------------------------------------------------------------------
 		Init
 	----------------------------------------------------------------------------*/
 protected:
-	virtual void OnInventoryItemDefinitionsLoaded(TSoftClassPtr<UCISInventorySlot> SoftInventorySlotClass,
-		TArray<FCISInventorySlotDefinition> SlotDefinitions) override;
+	virtual void OnInventoryItemDefinitionsLoaded(FCISInventoryItemDefinitionsLoadRequest LoadRequest
+	) override;
 
 	
 	/*----------------------------------------------------------------------------
 		Hotbar
 	----------------------------------------------------------------------------*/
 public:
+	/** The component actor items will attach to, usually a Skeletal Mesh Component */
 	UFUNCTION(BlueprintCallable, Category="CommonInventorySystem")
 	void SetHotbarEquipComponent(UPrimitiveComponent* Component);
 	
@@ -83,10 +90,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category="CommonInventorySystem")
 	void UnFreezeSelectedSlot();
 
-	void DeferredSpawnEquipedItem(const TSoftClassPtr<AActor>& SoftActorClass, float ChangeGameTime);
+	/** Are we holding an item */
+	UFUNCTION(BlueprintPure, Category="CommonInventorySystem")
+	bool IsHoldingActorItem() const;
 	
+	/**
+	 *  Adds AdditiveIndex to the current index and wraps it to start or end if it goes out of bounds.
+	 *  Internally calls UpdateSelectedHotbarSlot
+	 */
+	void AdditiveUpdateSelectedHotbarSlot(int32 AdditiveIndex);
+	
+	void UpdateSelectedHotbarSlot(int32 NewIndex);
+
 protected:
-	void UpdateSelectedHotbarSlot(int32 AdditiveIndex);
+	void DeferredSpawnEquipedItem(const TSoftClassPtr<AActor>& SoftActorClass, float ChangeGameTime, const FCISAttachInventoryItemFragment&
+	                              AttachFragment);
 
 	void SpawnActorForCurrentHotbarSelection();
 	

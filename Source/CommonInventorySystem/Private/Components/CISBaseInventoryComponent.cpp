@@ -26,7 +26,10 @@ namespace CIS::Core::Debug
 }
 #endif
 
-
+	
+	/*----------------------------------------------------------------------------
+		Slot
+	----------------------------------------------------------------------------*/
 FCISInventorySlotCategory::FCISInventorySlotCategory() {}
 
 FCISInventorySlotCategory::FCISInventorySlotCategory(int32 Size)
@@ -51,7 +54,10 @@ bool FCISInventorySlotIdentity::operator==(const FCISInventorySlotIdentity& Othe
 	return SlotCategoryTag == Other.SlotCategoryTag && SlotIndex == Other.SlotIndex;
 }
 
-
+	
+	/*----------------------------------------------------------------------------
+		Cache Info
+	----------------------------------------------------------------------------*/
 FCISInventoryItemCacheInfoSlotDataEntry::FCISInventoryItemCacheInfoSlotDataEntry(int32 InAmount):
 	Amount(InAmount)
 {}
@@ -143,7 +149,6 @@ const TMap<FGameplayTag, FCISInventoryItemCacheInfoSlotData>& FCISInventoryItemC
 	return Slots;
 }
 
-
 const FCISInventoryItemCacheInfoSlotData& FCISInventoryItemCacheInfo::GetDataForSlotCategory(const FCISInventorySlotIdentity& InSlot) const
 {
 	return Slots[InSlot.SlotCategoryTag];
@@ -153,6 +158,14 @@ const FCISInventoryItemCacheInfoSlotDataEntry& FCISInventoryItemCacheInfo::GetDa
 {
 	return Slots[InSlot.SlotCategoryTag].GetEntryData(InSlot.SlotIndex);
 }
+
+	
+	/*----------------------------------------------------------------------------
+		Load Request
+	----------------------------------------------------------------------------*/
+FCISInventoryItemDefinitionsLoadRequestSlotCategory::FCISInventoryItemDefinitionsLoadRequestSlotCategory() {}
+
+FCISInventoryItemDefinitionsLoadRequest::FCISInventoryItemDefinitionsLoadRequest() {}
 
 	
 	/*----------------------------------------------------------------------------
@@ -347,49 +360,67 @@ void UCISBaseInventoryComponent::OnInventoryPresetDefinitionLoaded()
 	auto* PresetDefinitionInterface = Cast<ICISInventoryDefinitionInterface>(PresetDefinitionObject);
 	if (!FU_ENSURE(PresetDefinitionInterface)) { return; }
 	
-	// load item definitions
+	// load item definitions, for each given category
 	if (auto* AM = UAssetManager::GetIfInitialized())
 	{
-		TArray<FCISInventorySlotDefinition> SlotDefinitions;
-		PresetDefinitionInterface->GetInventorySlotDefinitions(SlotDefinitions);
-	
+		// batch the async load in one request
+		FCISInventoryItemDefinitionsLoadRequest LoadRequest;
+		
 		TArray<FSoftObjectPath> Paths;
-		Paths.Reserve(SlotDefinitions.Num());
-		for (auto& SoftSlotDef : SlotDefinitions)
+		TArray<FGameplayTag> Categories;
+		PresetDefinitionInterface->GetInventorySlotCategories(Categories);
+		
+		for (const auto& CategoryTag : Categories)
 		{
-			if (!SoftSlotDef.SoftItemDefinition.IsNull())
-			{
-				Paths.Emplace(SoftSlotDef.SoftItemDefinition.ToSoftObjectPath());
-			}
-		}
+			TArray<FCISInventorySlotDefinition> SlotDefinitions;
+			PresetDefinitionInterface->GetInventorySlotDefinitions(CategoryTag, SlotDefinitions);
 
-		// also load slot class
-		Paths.Emplace(PresetDefinitionInterface->GetInventorySlotClass().ToSoftObjectPath());
+			for (auto& SoftSlotDef : SlotDefinitions)
+			{
+				if (!SoftSlotDef.SoftItemDefinition.IsNull())
+				{
+					Paths.Emplace(SoftSlotDef.SoftItemDefinition.ToSoftObjectPath());
+				}
+			}
+			// also load slot class
+			Paths.Emplace(PresetDefinitionInterface->GetInventorySlotClass(CategoryTag).ToSoftObjectPath());
+
+			FCISInventoryItemDefinitionsLoadRequestSlotCategory Entry;
+			Entry.CategoryTag = CategoryTag;
+			PresetDefinitionInterface->GetInventorySlotCategoryDefinition(CategoryTag, Entry.CategoryDefinition);
+			
+			LoadRequest.Categories.Add(CategoryTag, Entry);
+		}
 		
 		AM->GetStreamableManager().RequestAsyncLoad(
 			Paths,
 			FStreamableDelegate::CreateUObject(this, &ThisClass::OnInventoryItemDefinitionsLoaded,
-				PresetDefinitionInterface->GetInventorySlotClass(),SlotDefinitions),
+				LoadRequest),
 			FStreamableManager::AsyncLoadHighPriority
 		);
 	}
 }
 
-void UCISBaseInventoryComponent::OnInventoryItemDefinitionsLoaded(TSoftClassPtr<UCISInventorySlot> SoftInventorySlotClass, TArray<FCISInventorySlotDefinition> SlotDefinitions)
+void UCISBaseInventoryComponent::OnInventoryItemDefinitionsLoaded(FCISInventoryItemDefinitionsLoadRequest LoadRequest)
 {
-	InventorySlotClass = SoftInventorySlotClass.Get();
-	
-	// init default slots
-	auto DefaultInventoryTag = InventoryDeveloperSettings->DefaultInventoryCategoryTag;
-	InventorySlots.Emplace(DefaultInventoryTag, FCISInventorySlotCategory(SlotDefinitions.Num()));
-	for (auto i = 0; i < SlotDefinitions.Num(); i++)
+	for (auto& CategoryRequest : LoadRequest.Categories)
 	{
-		// this will also creates the item in deferred if necessary
-		auto& SlotDefinition = SlotDefinitions[i];
-		auto* ItemDefinition = SlotDefinition.SoftItemDefinition.Get();
-		auto& NewSlot = InventorySlots[DefaultInventoryTag].Slots.Emplace_GetRef(CreateSlotFromDefinition(DefaultInventoryTag, i, SlotDefinition));
-		OnInventorySlotAddedDelegate.Broadcast(DefaultInventoryTag, NewSlot.Get());
+		auto& CategoryTag = CategoryRequest.Key;
+		auto& CategoryData = CategoryRequest.Value;
+		
+		InventorySlotClassPerCategory.Add(CategoryTag, CategoryData.CategoryDefinition.SlotClass.Get());
+	
+		// init default slots
+		InventorySlots.Emplace(CategoryTag, FCISInventorySlotCategory(CategoryData.CategoryDefinition.SlotDefinitions.Num()));
+		for (auto i = 0; i < CategoryData.CategoryDefinition.SlotDefinitions.Num(); i++)
+		{
+			// this will also creates the item in deferred if necessary
+			auto& SlotDefinition = CategoryData.CategoryDefinition.SlotDefinitions[i];
+			auto& NewSlot = InventorySlots[CategoryTag].Slots.Emplace_GetRef(CreateSlotFromDefinition(CategoryTag, i, SlotDefinition));
+			OnInventorySlotAddedDelegate.Broadcast(CategoryTag, NewSlot.Get());
+		}
 	}
+	
 	bSlotsCreated = true;
 	OnInitialSlotsDoneInitialization();
 }
@@ -403,7 +434,7 @@ UCISInventorySlot* UCISBaseInventoryComponent::CreateSlot(FGameplayTag SlotCateg
 {
 	auto* NewSlot = NewObject<UCISInventorySlot>(
 		this, 
-		InventorySlotClass
+		InventorySlotClassPerCategory[SlotCategory]
 	);
 
 	NewSlot->InitSlot(SlotCategory, SlotIndex);
