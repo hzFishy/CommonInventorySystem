@@ -93,6 +93,11 @@ bool UCISCharacterInventoryComponent::IsHoldingActorItem() const
 	return CurrentHotbarSelection.IsActorSet();
 }
 
+AActor* UCISCharacterInventoryComponent::GetHoldingActorItem() const
+{
+	return CurrentHotbarSelection.GetActor();
+}
+
 void UCISCharacterInventoryComponent::AdditiveUpdateSelectedHotbarSlot(int32 AdditiveIndex)
 {
 	int32 NewIndex = CurrentSelectedSlotIndex + AdditiveIndex;

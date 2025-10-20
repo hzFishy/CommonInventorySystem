@@ -94,6 +94,9 @@ public:
 	UFUNCTION(BlueprintPure, Category="CommonInventorySystem")
 	bool IsHoldingActorItem() const;
 	
+	UFUNCTION(BlueprintPure, Category="CommonInventorySystem")
+	AActor* GetHoldingActorItem() const;
+	
 	/**
 	 *  Adds AdditiveIndex to the current index and wraps it to start or end if it goes out of bounds.
 	 *  Internally calls UpdateSelectedHotbarSlot

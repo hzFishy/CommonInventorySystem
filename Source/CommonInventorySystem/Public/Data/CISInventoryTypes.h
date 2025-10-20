@@ -68,6 +68,8 @@ struct COMMONINVENTORYSYSTEM_API FCISInventoryHotbarSelection
 	void SetActor(AActor* InItemActor);
 
 	bool IsActorSet() const { return ItemActor.IsValid(); };
+	
+	AActor* GetActor() const { return ItemActor.Get(); };
 
 	float GetSetRealTime() const { return RealGameTime; }
 	
